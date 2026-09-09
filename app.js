@@ -54,9 +54,35 @@ function saveAssessmentBook() {
   localStorage.setItem(ASSESSMENT_BOOK_KEY, JSON.stringify(assessmentBook));
 }
 
+function resetAssessmentBook() {
+  const first = blankAssessment(); first.rubricTitle = state.title;
+  assessmentBook = {rubricTitle:state.title,activeId:first.id,assessments:[first]};
+  assessment = first; saveAssessmentBook();
+}
+
+function restoreAssessmentExport(payload) {
+  if (!payload?.rubric || !Array.isArray(payload.assessments)) throw new Error('Ongeldig beoordelingenbestand');
+  state = normalizeState(payload.rubric);
+  const criterionIds = new Set(state.criteria.map(item => item.id)), usedIds = new Set();
+  const restored = payload.assessments.map(item => {
+    const id = typeof item?.id === 'string' && item.id && !usedIds.has(item.id) ? item.id : crypto.randomUUID();
+    usedIds.add(id);
+    const choices = {};
+    if (item?.choices && typeof item.choices === 'object') Object.entries(item.choices).forEach(([criterionId,level]) => {
+      if (criterionIds.has(criterionId) && Number.isInteger(level) && level >= 0 && level <= 2) choices[criterionId] = level;
+    });
+    return {id,rubricTitle:state.title,student:String(item?.student ?? '').slice(0,60),teacher:String(item?.teacher ?? '').slice(0,80),choices};
+  });
+  if (!restored.length) restored.push(blankAssessment());
+  assessmentBook = {rubricTitle:state.title,activeId:restored[0].id,assessments:restored};
+  assessment = restored[0]; sharedLinkMode = false;
+  localStorage.setItem(STORAGE_KEY,JSON.stringify(state)); saveAssessmentBook(); renderEditor(); applyTheme();
+}
+
 function validCriteria() { return state.criteria.filter(item => item.title.trim() || item.levels.some(x => x.trim())); }
 function maxPoints(criteria = validCriteria()) { return criteria.reduce((sum, item) => sum + item.weight * 2, 0); }
 function assessmentScore(criteria = validCriteria(), current = assessment) { return criteria.reduce((sum,item) => sum + (Number.isInteger(current.choices?.[item.id]) ? current.choices[item.id] * item.weight : 0), 0); }
+function isAssessmentComplete(current, criteria = validCriteria()) { return Boolean(criteria.length && current && criteria.every(item => Number.isInteger(current.choices?.[item.id]))); }
 function gradeFor(score, max) {
   if (!max) return 1;
   const ratio = Math.max(0, Math.min(1, score / max));
@@ -212,7 +238,7 @@ function openPreview(currentAssessment = null) {
   $('#previewStudent').textContent = currentAssessment?.student || '';
   $('#previewTeacher').textContent = currentAssessment?.teacher || '';
   $('#previewTotal').textContent = total;
-  $('#previewGrade').textContent = currentAssessment ? String(gradeFor(total,max)).replace('.',',') : '';
+  $('#previewGrade').textContent = isAssessmentComplete(currentAssessment,valid) ? String(gradeFor(total,max)).replace('.',',') : '';
   previewAssessment = currentAssessment;
   const readOnlySharedAssessment = sharedLinkMode && Boolean(currentAssessment);
   $('#backButton').hidden = readOnlySharedAssessment;
@@ -258,11 +284,11 @@ function buildPdf(valid, max, currentAssessment = null) {
   pdf.setDrawColor(...orange); pdf.setLineWidth(.45); pdf.line(14, 26, 283, 26);
   pdf.setFontSize(7.5); pdf.text('Eindcijfer', 241, 14);
   pdf.setDrawColor(...orange); pdf.setLineWidth(.5); pdf.roundedRect(259, 8, 24, 12, 1.4, 1.4);
-  if (currentAssessment) { pdf.setTextColor(...navy); pdf.setFont('helvetica','bold'); pdf.setFontSize(12); pdf.text(String(gradeFor(assessmentScore(valid,currentAssessment),max)).replace('.',','),271,15.7,{align:'center'}); }
+  if (isAssessmentComplete(currentAssessment,valid)) { pdf.setTextColor(...navy); pdf.setFont('helvetica','bold'); pdf.setFontSize(12); pdf.text(String(gradeFor(assessmentScore(valid,currentAssessment),max)).replace('.',','),271,15.7,{align:'center'}); }
   pdf.setDrawColor(82,101,109); pdf.setLineWidth(.25);
-  pdf.text('Naam leerling', 14, 35); pdf.line(38, 35, 142, 35);
+  pdf.text('Naam leerling', 14, 35); pdf.line(41, 35, 142, 35);
   pdf.text('Docent', 154, 35); pdf.line(169, 35, 283, 35);
-  if (currentAssessment) { pdf.setFont('helvetica','normal'); pdf.setTextColor(...navy); pdf.text(currentAssessment.student || '',40,34); pdf.text(currentAssessment.teacher || '',171,34); }
+  if (currentAssessment) { pdf.setFont('helvetica','normal'); pdf.setTextColor(...navy); pdf.text(currentAssessment.student || '',43,34); pdf.text(currentAssessment.teacher || '',171,34); }
   const headers = ['Criterium', ...state.levelNames.map((x, i) => `${i + 1} · ${x.trim() || `Niveau ${i + 1}`}`), 'Score'];
   const rows = valid.map(item => [item.title.trim() || 'Naamloos criterium', ...item.levels.map(x => x.trim() || '—'), '']);
   pdf.autoTable({
@@ -401,8 +427,11 @@ function removeStudentAssessment(id) {
 }
 
 async function downloadAllAssessments() {
-  const valid = validCriteria(), completed = assessmentBook.assessments.filter(item => item.student.trim());
-  if (!completed.length) { showToast('Vul eerst minimaal één leerlingnaam in.'); return; }
+  const valid = validCriteria();
+  const named = assessmentBook.assessments.filter(item => item.student.trim());
+  const completed = named.filter(item => isAssessmentComplete(item,valid));
+  const skipped = named.length - completed.length;
+  if (!completed.length) { showToast('Rond eerst minimaal één beoordeling volledig af.'); return; }
   const button = $('#downloadAllButton'), original = button.textContent;
   button.disabled = true; button.textContent = 'Bestanden maken…';
   try {
@@ -414,7 +443,8 @@ async function downloadAllAssessments() {
     folder.file(`${folderName} - beoordelingen.json`, JSON.stringify(assessmentExportData(), null, 2));
     const blob = await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}});
     const link = Object.assign(document.createElement('a'), {href:URL.createObjectURL(blob),download:`${folderName} - ingevulde rubrics.zip`});
-    link.click(); setTimeout(() => URL.revokeObjectURL(link.href),1000); showToast(`${completed.length} PDF’s en het klasbestand gedownload.`);
+    link.click(); setTimeout(() => URL.revokeObjectURL(link.href),1000);
+    showToast(`${completed.length} PDF’s en het klasbestand gedownload${skipped ? `; ${skipped} onvolledige beoordeling${skipped === 1 ? '' : 'en'} overgeslagen` : ''}.`);
   } catch (error) { console.error(error); showToast('De gezamenlijke download is niet gelukt.'); }
   finally { button.disabled = false; button.textContent = original; }
 }
@@ -455,6 +485,8 @@ async function gzipDecode(value) {
 
 async function makeShareLink(includeAssessment) {
   try {
+    if (includeAssessment && !assessment.student.trim()) { showToast('Vul eerst de voornaam van de leerling in.'); return; }
+    if (includeAssessment && !isAssessmentComplete(assessment)) { showToast('Vul eerst alle criteria voor deze leerling in.'); return; }
     const sharedState = {version:state.version,title:state.title,levelNames:state.levelNames,criteria:state.criteria};
     const payload = {v:1,r:sharedState,...(includeAssessment ? {a:assessment} : {})};
     const encoded = await gzipEncode(JSON.stringify(payload));
@@ -484,14 +516,21 @@ function showToast(message) { const toast = $('#toast'); toast.textContent = mes
 
 $('#importFile').addEventListener('change', async event => {
   const file = event.target.files[0]; if (!file) return;
-  try { state = normalizeState(JSON.parse(await file.text())); sharedLinkMode = false; renderEditor(); scheduleSave(); showToast('Rubric geïmporteerd.'); }
-  catch { showToast('Dit bestand is geen geldige rubric.'); }
+  try {
+    const payload = JSON.parse(await file.text());
+    if (payload?.type === 'rubricbouwer-beoordelingen') {
+      restoreAssessmentExport(payload); showToast(`${assessmentBook.assessments.length} beoordelingen geïmporteerd.`);
+    } else {
+      state = normalizeState(payload); sharedLinkMode = false; resetAssessmentBook(); renderEditor(); applyTheme(); scheduleSave(); showToast('Rubric geïmporteerd.');
+    }
+  }
+  catch { showToast('Dit bestand is geen geldige rubric of beoordelingenexport.'); }
   event.target.value = '';
 });
 
 $('#newRubric').addEventListener('click', () => {
   if (!confirm('Een nieuwe rubric starten? De huidige versie blijft alleen behouden als je die eerst exporteert.')) return;
-  state = defaultState(); sharedLinkMode = false; renderEditor(); scheduleSave();
+  state = defaultState(); sharedLinkMode = false; resetAssessmentBook(); renderEditor(); applyTheme(); scheduleSave();
 });
 $('#importButton').addEventListener('click', () => $('#importFile').click());
 $('#themeToggle').addEventListener('click', () => { state.theme = state.theme === 'dark' ? 'light' : 'dark'; applyTheme(); scheduleSave(); });
@@ -515,6 +554,7 @@ $('#downloadJsonButton').addEventListener('click', downloadAssessmentsJson);
 $('#downloadAllButton').addEventListener('click', downloadAllAssessments);
 $('#filledPdfButton').addEventListener('click', () => {
   const valid = validCriteria(); if (!assessment.student.trim()) { showToast('Vul eerst de voornaam van de leerling in.'); return; }
+  if (!isAssessmentComplete(assessment,valid)) { showToast('Vul eerst alle criteria voor deze leerling in.'); return; }
   buildPdf(valid,maxPoints(valid),assessment).save(`${safeName(state.title)} - ${safeName(assessment.student)}.pdf`);
 });
 $('#studentName').addEventListener('input', event => { assessment.student=event.target.value; renderFill(); });
