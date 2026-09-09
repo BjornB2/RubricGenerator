@@ -214,6 +214,8 @@ function openPreview(currentAssessment = null) {
   $('#previewTotal').textContent = total;
   $('#previewGrade').textContent = currentAssessment ? String(gradeFor(total,max)).replace('.',',') : '';
   previewAssessment = currentAssessment;
+  const readOnlySharedAssessment = sharedLinkMode && Boolean(currentAssessment);
+  $('#backButton').hidden = readOnlySharedAssessment;
   $('#downloadPackage').textContent = sharedLinkMode ? 'PDF downloaden' : 'Rubricpakket downloaden';
   $('.preview-note').textContent = sharedLinkMode
     ? 'Gedeelde rubric — gegevens uit deze link worden niet online opgeslagen.'

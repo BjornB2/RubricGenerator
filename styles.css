@@ -40,3 +40,4 @@ html[data-theme="dark"] .app-header,html[data-theme="dark"] .settings-panel,html
 .fill-identity{position:sticky;top:94px;z-index:15;align-items:stretch;box-shadow:0 10px 28px rgba(21,49,62,.12)}
 .fill-identity>.field{justify-content:flex-end}.fill-identity>.field input{height:44px}.fill-identity .live-result{min-height:68px}
 @media(max-width:900px){.fill-toolbar{position:relative}.student-tabbar{align-items:stretch;flex-direction:column}.student-switcher{grid-template-columns:38px minmax(0,1fr) 38px}.student-actions{justify-content:flex-start}.fill-identity{top:12px}.fill-identity .live-result{min-height:0}}
+[hidden]{display:none!important}
