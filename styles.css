@@ -32,12 +32,11 @@ html[data-theme="dark"] .app-header,html[data-theme="dark"] .settings-panel,html
 @media(max-width:900px){.fill-toolbar{align-items:flex-start;flex-wrap:wrap}.fill-toolbar>div:nth-child(2){order:-1;width:100%}.fill-toolbar-actions{margin-left:auto}.fill-identity{grid-template-columns:1fr}.fill-row{grid-template-columns:1fr}.level-choice{border-left:0;border-top:1px solid var(--line)}}
 
 /* Houd leerlinggegevens en de actuele uitslag zichtbaar tijdens het beoordelen. */
-.student-tabbar{display:flex;align-items:flex-end;gap:8px;margin-bottom:10px;border-bottom:1px solid var(--line)}
-.student-tabs{display:flex;align-items:flex-end;gap:4px;overflow-x:auto;flex:1;padding-top:4px}
-.student-tab{display:flex;align-items:center;gap:9px;max-width:190px;border:1px solid var(--line);border-bottom:0;border-radius:9px 9px 0 0;background:color-mix(in srgb,var(--paper) 82%,var(--canvas));color:var(--muted);padding:10px 12px;cursor:pointer;font:800 .75rem/1 inherit;white-space:nowrap}
-.student-tab span{overflow:hidden;text-overflow:ellipsis}.student-tab i{display:grid;place-items:center;width:17px;height:17px;border-radius:50%;font-style:normal;color:var(--muted)}.student-tab i:hover{background:#f3ddd5;color:#9b3b24}
-.student-tab.active{background:var(--paper);color:var(--navy);border-color:var(--navy);box-shadow:inset 0 3px var(--orange)}
-.student-tabbar>.button{margin-bottom:7px;flex:none}
+.student-tabbar{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:12px;padding:10px 12px;background:var(--paper);border:1px solid var(--line);border-radius:12px;box-shadow:0 5px 18px rgba(21,49,62,.05)}
+.student-switcher{display:grid;grid-template-columns:38px minmax(230px,340px) 38px;align-items:stretch;gap:7px}.student-switcher label{display:flex;flex-direction:column;gap:3px}.student-switcher label span{font-size:.62rem;font-weight:900;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.student-switcher select{height:38px;min-width:0;border:1px solid var(--line);border-radius:7px;background:var(--canvas);color:var(--navy);padding:0 34px 0 10px;font:800 .82rem/1 inherit}
+.student-step{align-self:end;width:38px;height:38px;border:1px solid var(--line);border-radius:7px;background:var(--paper);color:var(--navy);font-size:1rem;cursor:pointer}.student-step:disabled{opacity:.35;cursor:default}
+.student-actions{display:flex;align-items:center;justify-content:flex-end;gap:7px;flex-wrap:wrap}
 .fill-identity{position:sticky;top:94px;z-index:15;align-items:stretch;box-shadow:0 10px 28px rgba(21,49,62,.12)}
 .fill-identity>.field{justify-content:flex-end}.fill-identity>.field input{height:44px}.fill-identity .live-result{min-height:68px}
-@media(max-width:900px){.fill-toolbar{position:relative}.student-tabbar{align-items:center;flex-wrap:wrap}.student-tabs{width:100%;flex-basis:100%}.fill-identity{top:12px}.fill-identity .live-result{min-height:0}}
+@media(max-width:900px){.fill-toolbar{position:relative}.student-tabbar{align-items:stretch;flex-direction:column}.student-switcher{grid-template-columns:38px minmax(0,1fr) 38px}.student-actions{justify-content:flex-start}.fill-identity{top:12px}.fill-identity .live-result{min-height:0}}

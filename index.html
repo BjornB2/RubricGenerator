@@ -107,9 +107,17 @@
     </div>
     <main class="fill-shell">
       <nav class="student-tabbar" aria-label="Leerlingen">
-        <div class="student-tabs" id="studentTabs"></div>
-        <button class="button button-ghost" id="addStudentButton">+ Leerling</button>
-        <button class="button button-dark" id="downloadAllButton">Alle PDF’s</button>
+        <div class="student-switcher">
+          <button class="student-step" id="previousStudentButton" aria-label="Vorige leerling">←</button>
+          <label><span id="studentCounter">Leerling 1 van 1</span><select id="studentSelect" aria-label="Kies een leerling"></select></label>
+          <button class="student-step" id="nextStudentButton" aria-label="Volgende leerling">→</button>
+        </div>
+        <div class="student-actions">
+          <button class="button button-ghost" id="addStudentButton">+ Leerling</button>
+          <button class="button button-ghost" id="removeStudentButton">Verwijderen</button>
+          <button class="button button-ghost" id="downloadJsonButton">Klasbestand</button>
+          <button class="button button-dark" id="downloadAllButton">Alles downloaden</button>
+        </div>
       </nav>
       <section class="fill-identity settings-panel">
         <label class="field">Voornaam leerling<input id="studentName" type="text" maxlength="60" placeholder="Bijvoorbeeld: Sanne"></label>

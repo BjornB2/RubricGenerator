@@ -354,7 +354,15 @@ function closeFill() {
 
 function renderFill() {
   const valid = validCriteria();
-  $('#studentTabs').innerHTML = assessmentBook.assessments.map((item,index) => `<button class="student-tab ${item.id === assessment.id ? 'active' : ''}" data-assessment-id="${item.id}" title="Open beoordeling van ${escapeHtml(item.student || `leerling ${index + 1}`)}"><span>${escapeHtml(item.student || `Leerling ${index + 1}`)}</span>${assessmentBook.assessments.length > 1 ? '<i aria-hidden="true">×</i>' : ''}</button>`).join('');
+  const activeIndex = assessmentBook.assessments.findIndex(item => item.id === assessment.id);
+  $('#studentSelect').innerHTML = assessmentBook.assessments.map((item,index) => {
+    const complete = valid.length && valid.every(criterion => Number.isInteger(item.choices?.[criterion.id]));
+    return `<option value="${item.id}" ${item.id === assessment.id ? 'selected' : ''}>${complete ? '✓' : '○'} ${index + 1}. ${escapeHtml(item.student || 'Naam nog invullen')}</option>`;
+  }).join('');
+  $('#studentCounter').textContent = `Leerling ${activeIndex + 1} van ${assessmentBook.assessments.length}`;
+  $('#previousStudentButton').disabled = activeIndex <= 0;
+  $('#nextStudentButton').disabled = activeIndex >= assessmentBook.assessments.length - 1;
+  $('#removeStudentButton').disabled = assessmentBook.assessments.length === 1;
   $('#studentName').value = assessment.student || '';
   $('#teacherName').value = assessment.teacher || '';
   $('#fillCriteria').innerHTML = valid.map(item => `<article class="fill-row" data-id="${item.id}"><div class="fill-row-title">${escapeHtml(item.title || 'Naamloos criterium')}</div>${item.levels.map((text,i) => `<button class="level-choice ${assessment.choices?.[item.id] === i ? 'selected' : ''}" data-level="${i}"><small>${i+1} · ${escapeHtml(state.levelNames[i])}</small>${escapeHtml(text || '—')}<b>${i*item.weight}</b></button>`).join('')}</article>`).join('');
@@ -376,6 +384,12 @@ function selectStudentAssessment(id) {
   assessmentBook.activeId = id; assessment = selected; renderFill();
 }
 
+function stepStudentAssessment(direction) {
+  const index = assessmentBook.assessments.findIndex(item => item.id === assessment.id);
+  const next = assessmentBook.assessments[index + direction]; if (!next) return;
+  selectStudentAssessment(next.id);
+}
+
 function removeStudentAssessment(id) {
   if (assessmentBook.assessments.length === 1) return;
   const index = assessmentBook.assessments.findIndex(item => item.id === id); if (index < 0) return;
@@ -391,12 +405,36 @@ async function downloadAllAssessments() {
   button.disabled = true; button.textContent = 'PDF’s maken…';
   try {
     const folderName = safeName(state.title) || 'Rubric', zip = new JSZip(), folder = zip.folder(folderName);
-    completed.forEach((item,index) => folder.file(`${folderName} - ${safeName(item.student) || `Leerling ${index + 1}`}.pdf`, buildPdf(valid,maxPoints(valid),item).output('arraybuffer')));
+    completed.forEach((item,index) => {
+      const order = String(index + 1).padStart(2,'0');
+      folder.file(`${order} - ${safeName(item.student) || `Leerling ${index + 1}`}.pdf`, buildPdf(valid,maxPoints(valid),item).output('arraybuffer'));
+    });
+    folder.file(`${folderName} - beoordelingen.json`, JSON.stringify(assessmentExportData(), null, 2));
     const blob = await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}});
     const link = Object.assign(document.createElement('a'), {href:URL.createObjectURL(blob),download:`${folderName} - ingevulde rubrics.zip`});
     link.click(); setTimeout(() => URL.revokeObjectURL(link.href),1000); showToast(`${completed.length} PDF’s gedownload.`);
   } catch (error) { console.error(error); showToast('De gezamenlijke download is niet gelukt.'); }
   finally { button.disabled = false; button.textContent = original; }
+}
+
+function assessmentExportData() {
+  const valid = validCriteria(), max = maxPoints(valid);
+  return {
+    type:'rubricbouwer-beoordelingen',version:1,exportedAt:new Date().toISOString(),
+    rubric:{version:state.version,title:state.title,levelNames:state.levelNames,criteria:state.criteria},
+    assessments:assessmentBook.assessments.map(item => {
+      const answered = valid.filter(criterion => Number.isInteger(item.choices?.[criterion.id])).length;
+      const total = assessmentScore(valid,item), complete = valid.length > 0 && answered === valid.length;
+      return {id:item.id,student:item.student,teacher:item.teacher,choices:item.choices,answered,criteriaCount:valid.length,total,max,complete,grade:complete ? gradeFor(total,max) : null};
+    })
+  };
+}
+
+function downloadAssessmentsJson() {
+  const folderName = safeName(state.title) || 'Rubric';
+  const blob = new Blob([JSON.stringify(assessmentExportData(),null,2)],{type:'application/json'});
+  const link = Object.assign(document.createElement('a'),{href:URL.createObjectURL(blob),download:`${folderName} - beoordelingen.json`});
+  link.click(); setTimeout(() => URL.revokeObjectURL(link.href),1000); showToast('Klasbestand gedownload.');
 }
 
 async function gzipEncode(value) {
@@ -466,12 +504,12 @@ $('#downloadPackage').addEventListener('click', () => sharedLinkMode ? downloadP
 $('#closeFillButton').addEventListener('click', closeFill);
 $('#shareFilledButton').addEventListener('click', () => makeShareLink(true));
 $('#addStudentButton').addEventListener('click', addStudentAssessment);
+$('#removeStudentButton').addEventListener('click', () => removeStudentAssessment(assessment.id));
+$('#previousStudentButton').addEventListener('click', () => stepStudentAssessment(-1));
+$('#nextStudentButton').addEventListener('click', () => stepStudentAssessment(1));
+$('#studentSelect').addEventListener('change', event => selectStudentAssessment(event.target.value));
+$('#downloadJsonButton').addEventListener('click', downloadAssessmentsJson);
 $('#downloadAllButton').addEventListener('click', downloadAllAssessments);
-$('#studentTabs').addEventListener('click', event => {
-  const tab = event.target.closest('.student-tab'); if (!tab) return;
-  if (event.target.closest('i')) removeStudentAssessment(tab.dataset.assessmentId);
-  else selectStudentAssessment(tab.dataset.assessmentId);
-});
 $('#filledPdfButton').addEventListener('click', () => {
   const valid = validCriteria(); if (!assessment.student.trim()) { showToast('Vul eerst de voornaam van de leerling in.'); return; }
   buildPdf(valid,maxPoints(valid),assessment).save(`${safeName(state.title)} - ${safeName(assessment.student)}.pdf`);
