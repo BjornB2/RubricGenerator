@@ -172,6 +172,19 @@
     </main>
   </section>
 
+  <dialog class="import-dialog" id="assessmentImportDialog" aria-labelledby="assessmentImportTitle">
+    <div class="import-dialog-content">
+      <p class="eyebrow">Beoordelingenbestand</p>
+      <h2 id="assessmentImportTitle">Wat wil je importeren?</h2>
+      <p>Dit bestand bevat een rubric en <strong id="assessmentImportCount">0 beoordelingen</strong>. Kies welke gegevens je in deze browser wilt openen.</p>
+      <div class="import-dialog-actions">
+        <button class="button button-ghost" id="cancelAssessmentImport">Annuleren</button>
+        <button class="button button-dark" id="importRubricOnly">Alleen rubric</button>
+        <button class="button button-accent" id="importRubricAndAssessments">Rubric en beoordelingen</button>
+      </div>
+    </div>
+  </dialog>
+
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script src="vendor/jspdf.umd.min.js"></script>
   <script src="vendor/jspdf.plugin.autotable.min.js"></script>

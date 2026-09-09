@@ -16,6 +16,7 @@ let assessmentBook = loadAssessmentBook();
 let assessment = activeAssessment();
 let sharedLinkMode = false;
 let previewAssessment = null;
+let pendingAssessmentImport = null;
 let saveTimer;
 const $ = (selector) => document.querySelector(selector);
 const list = $('#criteriaList');
@@ -77,6 +78,15 @@ function restoreAssessmentExport(payload) {
   assessmentBook = {rubricTitle:state.title,activeId:restored[0].id,assessments:restored};
   assessment = restored[0]; sharedLinkMode = false;
   localStorage.setItem(STORAGE_KEY,JSON.stringify(state)); saveAssessmentBook(); renderEditor(); applyTheme();
+}
+
+function importRubricOnly(payload) {
+  state = normalizeState(payload.rubric || payload); sharedLinkMode = false;
+  resetAssessmentBook(); renderEditor(); applyTheme(); scheduleSave();
+}
+
+function closeAssessmentImportDialog() {
+  pendingAssessmentImport = null; $('#assessmentImportDialog').close();
 }
 
 function validCriteria() { return state.criteria.filter(item => item.title.trim() || item.levels.some(x => x.trim())); }
@@ -531,9 +541,12 @@ $('#importFile').addEventListener('change', async event => {
   try {
     const payload = JSON.parse(await file.text());
     if (payload?.type === 'rubricbouwer-beoordelingen') {
-      restoreAssessmentExport(payload); showToast(`${assessmentBook.assessments.length} beoordelingen geïmporteerd.`);
+      pendingAssessmentImport = payload;
+      const count = Array.isArray(payload.assessments) ? payload.assessments.length : 0;
+      $('#assessmentImportCount').textContent = `${count} beoordeling${count === 1 ? '' : 'en'}`;
+      $('#assessmentImportDialog').showModal();
     } else {
-      state = normalizeState(payload); sharedLinkMode = false; resetAssessmentBook(); renderEditor(); applyTheme(); scheduleSave(); showToast('Rubric geïmporteerd.');
+      importRubricOnly(payload); showToast('Rubric geïmporteerd.');
     }
   }
   catch { showToast('Dit bestand is geen geldige rubric of beoordelingenexport.'); }
@@ -545,6 +558,17 @@ $('#newRubric').addEventListener('click', () => {
   state = defaultState(); sharedLinkMode = false; resetAssessmentBook(); renderEditor(); applyTheme(); scheduleSave();
 });
 $('#importButton').addEventListener('click', () => $('#importFile').click());
+$('#cancelAssessmentImport').addEventListener('click', closeAssessmentImportDialog);
+$('#assessmentImportDialog').addEventListener('cancel', () => { pendingAssessmentImport = null; });
+$('#importRubricOnly').addEventListener('click', () => {
+  if (!pendingAssessmentImport) return;
+  importRubricOnly(pendingAssessmentImport); closeAssessmentImportDialog(); showToast('Alleen de rubric is geïmporteerd.');
+});
+$('#importRubricAndAssessments').addEventListener('click', () => {
+  if (!pendingAssessmentImport) return;
+  const payload = pendingAssessmentImport; restoreAssessmentExport(payload); closeAssessmentImportDialog();
+  showToast(`${assessmentBook.assessments.length} beoordelingen geïmporteerd.`);
+});
 $('#helpButton').addEventListener('click', openHelp);
 $('#closeHelpButton').addEventListener('click', closeHelp);
 $('#themeToggle').addEventListener('click', () => { state.theme = state.theme === 'dark' ? 'light' : 'dark'; applyTheme(); scheduleSave(); });
