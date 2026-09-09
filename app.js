@@ -1,5 +1,6 @@
 const STORAGE_KEY = 'rubricbouwer.v1';
 const ASSESSMENT_KEY = 'rubricbouwer.assessment.v1';
+const ASSESSMENT_BOOK_KEY = 'rubricbouwer.assessments.v2';
 
 const blankCriterion = () => ({ id: crypto.randomUUID(), title: '', levels: ['', '', ''], weight: 1 });
 const defaultState = () => ({
@@ -11,7 +12,8 @@ const defaultState = () => ({
 });
 
 let state = loadState();
-let assessment = loadAssessment();
+let assessmentBook = loadAssessmentBook();
+let assessment = activeAssessment();
 let sharedLinkMode = false;
 let previewAssessment = null;
 let saveTimer;
@@ -25,9 +27,31 @@ function loadState() {
   } catch { return defaultState(); }
 }
 
-function loadAssessment() {
-  try { return JSON.parse(localStorage.getItem(ASSESSMENT_KEY)) || {student:'',teacher:'',choices:{}}; }
-  catch { return {student:'',teacher:'',choices:{}}; }
+function blankAssessment(teacher = '') {
+  return {id:crypto.randomUUID(),rubricTitle:state?.title || '',student:'',teacher,choices:{}};
+}
+
+function loadAssessmentBook() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(ASSESSMENT_BOOK_KEY));
+    if (Array.isArray(saved?.assessments) && saved.assessments.length) return saved;
+    const legacy = JSON.parse(localStorage.getItem(ASSESSMENT_KEY));
+    if (legacy) {
+      const migrated = {...legacy,id:legacy.id || crypto.randomUUID(),choices:legacy.choices || {}};
+      return {rubricTitle:migrated.rubricTitle || '',activeId:migrated.id,assessments:[migrated]};
+    }
+  } catch {}
+  const first = blankAssessment();
+  return {rubricTitle:'',activeId:first.id,assessments:[first]};
+}
+
+function activeAssessment() {
+  return assessmentBook.assessments.find(item => item.id === assessmentBook.activeId) || assessmentBook.assessments[0];
+}
+
+function saveAssessmentBook() {
+  assessmentBook.activeId = assessment.id;
+  localStorage.setItem(ASSESSMENT_BOOK_KEY, JSON.stringify(assessmentBook));
 }
 
 function validCriteria() { return state.criteria.filter(item => item.title.trim() || item.levels.some(x => x.trim())); }
@@ -311,10 +335,15 @@ function safeName(value) { return String(value).trim().replace(/[<>:"/\\|?*\x00-
 function openFill() {
   const valid = validCriteria();
   if (!state.title.trim() || !valid.length) { showToast('Vul eerst de projectnaam en minimaal één criterium in.'); return; }
-  if (assessment.rubricTitle !== state.title) assessment = {rubricTitle:state.title,student:'',teacher:assessment.teacher || '',choices:{}};
+  if (assessmentBook.rubricTitle !== state.title) {
+    const first = blankAssessment(assessment.teacher || '');
+    first.rubricTitle = state.title;
+    assessmentBook = {rubricTitle:state.title,activeId:first.id,assessments:[first]};
+    assessment = first;
+  }
   $('#editor').style.display = 'none'; $('.app-header').style.display = 'none'; $('#preview').classList.remove('active');
   $('#fillScreen').classList.add('active'); $('#fillScreen').setAttribute('aria-hidden','false');
-  $('#fillProjectTitle').textContent = state.title; $('#studentName').value = assessment.student || ''; $('#teacherName').value = assessment.teacher || '';
+  $('#fillProjectTitle').textContent = state.title;
   renderFill(); window.scrollTo(0,0);
 }
 
@@ -325,11 +354,49 @@ function closeFill() {
 
 function renderFill() {
   const valid = validCriteria();
+  $('#studentTabs').innerHTML = assessmentBook.assessments.map((item,index) => `<button class="student-tab ${item.id === assessment.id ? 'active' : ''}" data-assessment-id="${item.id}" title="Open beoordeling van ${escapeHtml(item.student || `leerling ${index + 1}`)}"><span>${escapeHtml(item.student || `Leerling ${index + 1}`)}</span>${assessmentBook.assessments.length > 1 ? '<i aria-hidden="true">×</i>' : ''}</button>`).join('');
+  $('#studentName').value = assessment.student || '';
+  $('#teacherName').value = assessment.teacher || '';
   $('#fillCriteria').innerHTML = valid.map(item => `<article class="fill-row" data-id="${item.id}"><div class="fill-row-title">${escapeHtml(item.title || 'Naamloos criterium')}</div>${item.levels.map((text,i) => `<button class="level-choice ${assessment.choices?.[item.id] === i ? 'selected' : ''}" data-level="${i}"><small>${i+1} · ${escapeHtml(state.levelNames[i])}</small>${escapeHtml(text || '—')}<b>${i*item.weight}</b></button>`).join('')}</article>`).join('');
   const answered = valid.filter(item => Number.isInteger(assessment.choices?.[item.id])).length, max = maxPoints(valid), total = assessmentScore(valid);
   $('#fillProgress').textContent = `${answered}/${valid.length}`; $('#fillTotal').textContent = `${total}/${max}`;
   $('#fillGrade').textContent = answered === valid.length ? String(gradeFor(total,max)).replace('.',',') : '—';
-  localStorage.setItem(ASSESSMENT_KEY,JSON.stringify(assessment));
+  saveAssessmentBook();
+}
+
+function addStudentAssessment() {
+  const next = blankAssessment(assessment.teacher || '');
+  next.rubricTitle = state.title;
+  assessmentBook.assessments.push(next); assessmentBook.activeId = next.id; assessment = next;
+  renderFill(); $('#studentName').focus();
+}
+
+function selectStudentAssessment(id) {
+  const selected = assessmentBook.assessments.find(item => item.id === id); if (!selected) return;
+  assessmentBook.activeId = id; assessment = selected; renderFill();
+}
+
+function removeStudentAssessment(id) {
+  if (assessmentBook.assessments.length === 1) return;
+  const index = assessmentBook.assessments.findIndex(item => item.id === id); if (index < 0) return;
+  assessmentBook.assessments.splice(index,1);
+  assessment = assessmentBook.assessments[Math.min(index, assessmentBook.assessments.length - 1)];
+  assessmentBook.activeId = assessment.id; renderFill();
+}
+
+async function downloadAllAssessments() {
+  const valid = validCriteria(), completed = assessmentBook.assessments.filter(item => item.student.trim());
+  if (!completed.length) { showToast('Vul eerst minimaal één leerlingnaam in.'); return; }
+  const button = $('#downloadAllButton'), original = button.textContent;
+  button.disabled = true; button.textContent = 'PDF’s maken…';
+  try {
+    const folderName = safeName(state.title) || 'Rubric', zip = new JSZip(), folder = zip.folder(folderName);
+    completed.forEach((item,index) => folder.file(`${folderName} - ${safeName(item.student) || `Leerling ${index + 1}`}.pdf`, buildPdf(valid,maxPoints(valid),item).output('arraybuffer')));
+    const blob = await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}});
+    const link = Object.assign(document.createElement('a'), {href:URL.createObjectURL(blob),download:`${folderName} - ingevulde rubrics.zip`});
+    link.click(); setTimeout(() => URL.revokeObjectURL(link.href),1000); showToast(`${completed.length} PDF’s gedownload.`);
+  } catch (error) { console.error(error); showToast('De gezamenlijke download is niet gelukt.'); }
+  finally { button.disabled = false; button.textContent = original; }
 }
 
 async function gzipEncode(value) {
@@ -398,6 +465,13 @@ $('#backButton').addEventListener('click', closePreview);
 $('#downloadPackage').addEventListener('click', () => sharedLinkMode ? downloadPreviewPdf() : downloadPackage());
 $('#closeFillButton').addEventListener('click', closeFill);
 $('#shareFilledButton').addEventListener('click', () => makeShareLink(true));
+$('#addStudentButton').addEventListener('click', addStudentAssessment);
+$('#downloadAllButton').addEventListener('click', downloadAllAssessments);
+$('#studentTabs').addEventListener('click', event => {
+  const tab = event.target.closest('.student-tab'); if (!tab) return;
+  if (event.target.closest('i')) removeStudentAssessment(tab.dataset.assessmentId);
+  else selectStudentAssessment(tab.dataset.assessmentId);
+});
 $('#filledPdfButton').addEventListener('click', () => {
   const valid = validCriteria(); if (!assessment.student.trim()) { showToast('Vul eerst de voornaam van de leerling in.'); return; }
   buildPdf(valid,maxPoints(valid),assessment).save(`${safeName(state.title)} - ${safeName(assessment.student)}.pdf`);
