@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#123d55">
+  <title>Rubricbouwer</title>
+  <link rel="stylesheet" href="styles.css?v=4">
+</head>
+<body>
+  <header class="app-header no-print">
+    <a class="brand" href="#editor" aria-label="Rubricbouwer start">
+      <span><strong>Rubricbouwer</strong><small>van criterium naar printklare rubric</small></span>
+    </a>
+    <nav class="header-actions" aria-label="Bestandsacties">
+      <button class="button button-ghost theme-toggle" id="themeToggle" aria-label="Wissel tussen lichte en donkere modus" title="Wissel thema">◐ <span>Donker</span></button>
+      <button class="button button-ghost" id="newRubric">Nieuwe rubric</button>
+      <button class="button button-ghost" id="importButton">Importeren</button>
+      <button class="button button-ghost" id="exportButton">Exporteren</button>
+      <input type="file" id="importFile" accept="application/json,.json" hidden>
+      <button class="button button-accent" id="previewButton">PDF-preview</button>
+    </nav>
+  </header>
+
+  <main id="editor" class="editor-shell no-print">
+    <section class="intro-panel">
+      <div>
+        <p class="eyebrow">Rubric ontwerpen</p>
+        <h1>Maak beoordelen helder.</h1>
+        <p>Vul per criterium drie niveaus in en bepaal met de schuif hoe zwaar het meetelt. Je werk wordt automatisch in deze browser bewaard.</p>
+      </div>
+      <div class="autosave" id="saveStatus" role="status"><span></span> Opgeslagen</div>
+    </section>
+
+    <section class="settings-panel" aria-labelledby="generalHeading">
+      <div class="section-heading">
+        <span class="step">01</span>
+        <div><h2 id="generalHeading">Algemeen</h2><p>De titel en kolomnamen van je rubric.</p></div>
+      </div>
+      <div class="settings-grid">
+        <label class="field field-wide">Naam van het project
+          <input id="rubricTitle" type="text" maxlength="120" placeholder="Bijvoorbeeld: Krukje">
+        </label>
+        <label class="field">Niveau 1
+          <input id="level1Name" type="text" maxlength="40" placeholder="Onvoldoende">
+        </label>
+        <label class="field">Niveau 2
+          <input id="level2Name" type="text" maxlength="40" placeholder="Voldoende">
+        </label>
+        <label class="field">Niveau 3
+          <input id="level3Name" type="text" maxlength="40" placeholder="Goed">
+        </label>
+      </div>
+    </section>
+
+    <section class="criteria-section" aria-labelledby="criteriaHeading">
+      <div class="section-heading section-heading-row">
+        <div class="heading-group"><span class="step">02</span><div><h2 id="criteriaHeading">Criteria</h2><p>De score per rij is 0, het gewicht, of tweemaal het gewicht.</p></div></div>
+        <button class="button button-dark" id="addCriterion">+ Criterium toevoegen</button>
+      </div>
+      <div id="criteriaList" class="criteria-list"></div>
+      <button class="add-card" id="addCriterionBottom"><span>+</span> Nog een criterium toevoegen</button>
+    </section>
+
+    <section class="summary-panel" aria-label="Samenvatting">
+      <div><span>Criteria</span><strong id="criterionCount">0</strong></div>
+      <div><span>Maximale score</span><strong id="maxScore">0</strong></div>
+      <button class="button button-accent" id="previewButtonBottom">Rubric bekijken</button>
+    </section>
+  </main>
+
+  <section id="preview" class="preview-screen" aria-hidden="true">
+    <div class="preview-toolbar no-print">
+      <button class="button button-ghost" id="backButton">← Terug naar bewerken</button>
+      <div class="preview-note">Download de PDF en het importbestand samen in één rubricpakket.</div>
+      <div class="preview-actions"><button class="button button-accent" id="downloadPackage">Rubricpakket downloaden</button></div>
+    </div>
+    <article class="rubric-page" id="rubricPage">
+      <header class="print-header">
+        <div><p>Beoordelingsrubric</p><h1 id="previewTitle"></h1></div>
+        <div class="header-grade"><strong>Eindcijfer</strong><span></span></div>
+      </header>
+      <div class="identity-row">
+        <label>Naam leerling <span></span></label>
+        <label>Docent <span></span></label>
+      </div>
+      <div class="table-wrap">
+        <table class="rubric-table">
+          <thead><tr><th>Criterium</th><th id="previewLevel1">1 · Onvoldoende</th><th id="previewLevel2">2 · Voldoende</th><th id="previewLevel3">3 · Goed</th><th>Score</th></tr></thead>
+          <tbody id="previewRows"></tbody>
+        </table>
+        <div class="score-total"><strong>Totaalscore</strong><span></span><b>/ <i id="footerMax">0</i></b></div>
+      </div>
+      <footer class="print-footer">
+        <div class="grade-scale" id="gradeScale"></div>
+      </footer>
+    </article>
+  </section>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="vendor/jspdf.umd.min.js"></script>
+  <script src="vendor/jspdf.plugin.autotable.min.js"></script>
+  <script src="vendor/jszip.min.js"></script>
+  <script src="app.js?v=4"></script>
+</body>
+</html>
