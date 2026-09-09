@@ -35,15 +35,15 @@ function blankAssessment(teacher = '') {
 function loadAssessmentBook() {
   try {
     const saved = JSON.parse(localStorage.getItem(ASSESSMENT_BOOK_KEY));
-    if (Array.isArray(saved?.assessments) && saved.assessments.length) return saved;
+    if (Array.isArray(saved?.assessments) && saved.assessments.length) return {...saved,className:String(saved.className ?? '').slice(0,60)};
     const legacy = JSON.parse(localStorage.getItem(ASSESSMENT_KEY));
     if (legacy) {
       const migrated = {...legacy,id:legacy.id || crypto.randomUUID(),choices:legacy.choices || {}};
-      return {rubricTitle:migrated.rubricTitle || '',activeId:migrated.id,assessments:[migrated]};
+      return {rubricTitle:migrated.rubricTitle || '',className:'',activeId:migrated.id,assessments:[migrated]};
     }
   } catch {}
   const first = blankAssessment();
-  return {rubricTitle:'',activeId:first.id,assessments:[first]};
+  return {rubricTitle:'',className:'',activeId:first.id,assessments:[first]};
 }
 
 function activeAssessment() {
@@ -57,7 +57,7 @@ function saveAssessmentBook() {
 
 function resetAssessmentBook() {
   const first = blankAssessment(); first.rubricTitle = state.title;
-  assessmentBook = {rubricTitle:state.title,activeId:first.id,assessments:[first]};
+  assessmentBook = {rubricTitle:state.title,className:'',activeId:first.id,assessments:[first]};
   assessment = first; saveAssessmentBook();
 }
 
@@ -75,7 +75,7 @@ function restoreAssessmentExport(payload) {
     return {id,rubricTitle:state.title,student:String(item?.student ?? '').slice(0,60),teacher:String(item?.teacher ?? '').slice(0,80),choices};
   });
   if (!restored.length) restored.push(blankAssessment());
-  assessmentBook = {rubricTitle:state.title,activeId:restored[0].id,assessments:restored};
+  assessmentBook = {rubricTitle:state.title,className:String(payload.className ?? '').slice(0,60),activeId:restored[0].id,assessments:restored};
   assessment = restored[0]; sharedLinkMode = false;
   localStorage.setItem(STORAGE_KEY,JSON.stringify(state)); saveAssessmentBook(); renderEditor(); applyTheme();
 }
@@ -488,13 +488,19 @@ function downloadPreviewPdf() {
 
 function safeName(value) { return String(value).trim().replace(/[<>:"/\\|?*\x00-\x1F]/g,'-').replace(/[. ]+$/,'').slice(0,80); }
 
+function assessmentFileBase() {
+  const title = safeName(state.title) || 'Rubric';
+  const className = safeName(assessmentBook.className);
+  return className ? `${title} - ${className}` : title;
+}
+
 function openFill() {
   const valid = validCriteria();
   if (!state.title.trim() || !valid.length) { showToast('Vul eerst de projectnaam en minimaal één criterium in.'); return; }
   if (assessmentBook.rubricTitle !== state.title) {
     const first = blankAssessment(assessment.teacher || '');
     first.rubricTitle = state.title;
-    assessmentBook = {rubricTitle:state.title,activeId:first.id,assessments:[first]};
+    assessmentBook = {rubricTitle:state.title,className:'',activeId:first.id,assessments:[first]};
     assessment = first;
   }
   closeMobileMenu(); document.body.classList.add('mobile-actions-hidden');
@@ -520,6 +526,7 @@ function renderFill() {
   $('#previousStudentButton').disabled = activeIndex <= 0;
   $('#nextStudentButton').disabled = activeIndex >= assessmentBook.assessments.length - 1;
   $('#removeStudentButton').disabled = assessmentBook.assessments.length === 1;
+  $('#className').value = assessmentBook.className || '';
   $('#studentName').value = assessment.student || '';
   $('#teacherName').value = assessment.teacher || '';
   $('#fillCriteria').innerHTML = valid.map(item => `<article class="fill-row" data-id="${item.id}"><div class="fill-row-title">${escapeHtml(item.title || 'Naamloos criterium')}</div>${item.levels.map((text,i) => `<button class="level-choice ${assessment.choices?.[item.id] === i ? 'selected' : ''}" data-level="${i}"><small>${i+1} · ${escapeHtml(state.levelNames[i])}</small>${escapeHtml(text || '—')}<b>${i*item.weight}</b></button>`).join('')}</article>`).join('');
@@ -564,7 +571,7 @@ async function downloadAllAssessments() {
   const button = $('#downloadAllButton'), original = button.textContent;
   button.disabled = true; button.textContent = 'Bestanden maken…';
   try {
-    const folderName = safeName(state.title) || 'Rubric', zip = new JSZip(), folder = zip.folder(folderName);
+    const folderName = assessmentFileBase(), zip = new JSZip(), folder = zip.folder(folderName);
     completed.forEach((item,index) => {
       const order = String(index + 1).padStart(2,'0');
       folder.file(`${order} - ${safeName(item.student) || `Leerling ${index + 1}`}.pdf`, buildPdf(valid,maxPoints(valid),item).output('arraybuffer'));
@@ -581,7 +588,7 @@ async function downloadAllAssessments() {
 function assessmentExportData() {
   const valid = validCriteria(), max = maxPoints(valid);
   return {
-    type:'rubricbouwer-beoordelingen',version:1,exportedAt:new Date().toISOString(),
+    type:'rubricbouwer-beoordelingen',version:1,exportedAt:new Date().toISOString(),className:assessmentBook.className || '',
     rubric:{version:state.version,title:state.title,levelNames:state.levelNames,criteria:state.criteria},
     assessments:assessmentBook.assessments.map(item => {
       const answered = valid.filter(criterion => Number.isInteger(item.choices?.[criterion.id])).length;
@@ -592,7 +599,7 @@ function assessmentExportData() {
 }
 
 function downloadAssessmentsJson() {
-  const folderName = safeName(state.title) || 'Rubric';
+  const folderName = assessmentFileBase();
   const blob = new Blob([JSON.stringify(assessmentExportData(),null,2)],{type:'application/json'});
   const link = Object.assign(document.createElement('a'),{href:URL.createObjectURL(blob),download:`${folderName} - beoordelingen.json`});
   link.click(); setTimeout(() => URL.revokeObjectURL(link.href),1000); showToast('Klasbestand opgeslagen.');
@@ -733,7 +740,7 @@ $('#downloadAllButton').addEventListener('click', downloadAllAssessments);
 $('#filledPdfButton').addEventListener('click', () => {
   const valid = validCriteria(); if (!assessment.student.trim()) { showToast('Vul eerst de voornaam van de leerling in.'); return; }
   if (!isAssessmentComplete(assessment,valid)) { showToast('Vul eerst alle criteria voor deze leerling in.'); return; }
-  buildPdf(valid,maxPoints(valid),assessment).save(`${safeName(state.title)} - ${safeName(assessment.student)}.pdf`);
+  buildPdf(valid,maxPoints(valid),assessment).save(`${assessmentFileBase()} - ${safeName(assessment.student)}.pdf`);
 });
 
 $('#mobileMenuToggle').addEventListener('click', openMobileMenu);
@@ -759,6 +766,7 @@ document.addEventListener('click', event => {
 });
 $('#studentName').addEventListener('input', event => { assessment.student=event.target.value; renderFill(); });
 $('#teacherName').addEventListener('input', event => { assessment.teacher=event.target.value; renderFill(); });
+$('#className').addEventListener('input', event => { assessmentBook.className=event.target.value; saveAssessmentBook(); });
 $('#fillCriteria').addEventListener('click', event => {
   const button=event.target.closest('.level-choice'), row=event.target.closest('.fill-row'); if(!button||!row)return;
   assessment.choices[row.dataset.id]=Number(button.dataset.level); renderFill();

@@ -13,7 +13,7 @@
   <meta name="twitter:title" content="Gedeelde rubric bekijken | Rubricbouwer">
   <meta name="twitter:description" content="Open deze gedeelde rubric om de criteria, beoordeling en het eindcijfer te bekijken.">
   <title>Rubricbouwer</title>
-  <link rel="stylesheet" href="styles.css?v=11">
+  <link rel="stylesheet" href="styles.css?v=12">
 </head>
 <body>
   <header class="app-header no-print">
@@ -130,7 +130,7 @@
         <article><h2>Meerdere leerlingen</h2><p>Voeg leerlingen toe met <strong>Nieuwe leerling</strong>. Gebruik de pijlen of de keuzelijst om door de klas te gaan. Een vinkje betekent dat alle criteria voor die leerling zijn ingevuld.</p></article>
         <article><h2>Delen met een collega</h2><p><strong>Rubric delen</strong> kopieert een link met het volledige ontwerp erin. Een collega opent de link in de browser en krijgt direct een eigen lokale kopie in de editor. Wijzigingen in die kopie veranderen jouw rubric niet. Na aanpassingen moet de collega de rubric opnieuw opslaan of een nieuwe deellink maken om de gewijzigde versie verder te delen.</p></article>
         <article><h2>Delen met een leerling</h2><p>Na een volledige beoordeling kopieert <strong>Deellink voor leerling</strong> een alleen-lezen weergave met een PDF-knop. De leerling krijgt geen toegang tot de editor of andere leerlingen.</p></article>
-        <article><h2>Bewaren, openen en opslaan</h2><p>Je werk wordt automatisch in deze browser bewaard. Met <strong>Rubric opslaan</strong> bewaar je een bestand op je apparaat; je kiest daarbij of de beoordelingen meegaan. Open je een klasbestand in de editor, dan kies je of je alleen de rubric of ook de beoordelingen terugzet. Op de invulpagina opent <strong>Klasbestand openen</strong> de volledige klas. <strong>Klasbestand opslaan</strong> bewaart de rubric en alle beoordelingen. <strong>Alle PDF’s downloaden</strong> maakt één ZIP met alle voltooide leerling-PDF’s en het klasbestand.</p></article>
+        <article><h2>Bewaren, openen en opslaan</h2><p>Je werk wordt automatisch in deze browser bewaard. Met <strong>Rubric opslaan</strong> bewaar je een bestand op je apparaat; je kiest daarbij of de beoordelingen meegaan. Open je een klasbestand in de editor, dan kies je of je alleen de rubric of ook de beoordelingen terugzet. Op de invulpagina opent <strong>Klasbestand openen</strong> de volledige klas. <strong>Klasbestand opslaan</strong> bewaart de rubric en alle beoordelingen. Een ingevulde klas of cluster wordt alleen gebruikt in bestandsnamen en verschijnt niet in de rubric of PDF. <strong>Alle PDF’s downloaden</strong> maakt één ZIP met alle voltooide leerling-PDF’s en het klasbestand.</p></article>
         <article><h2>Hoe ontstaat het cijfer?</h2><p>Als je bij ieder criterium het middelste niveau kiest, is het eindcijfer precies een 6,0. Alles op het laagste niveau geeft een 1,0 en alles op het hoogste niveau een 10. Tussenliggende resultaten worden afgerond op halve cijfers.</p></article>
         <article><h2>Waarom zijn deellinks zo lang?</h2><p>Er wordt niets in een database of op een server opgeslagen. Daarom zit de volledige rubric — en bij een leerlinglink ook de ingevulde beoordeling — samengeperst in de link zelf. Meer criteria en langere beschrijvingen maken de link langer. Deel een ingevulde link alleen met de bedoelde leerling.</p></article>
       </section>
@@ -180,6 +180,10 @@
           <label><span id="studentCounter">Leerling 1 van 1</span><select id="studentSelect" aria-label="Kies een leerling"></select></label>
           <button class="student-step" id="nextStudentButton" aria-label="Volgende leerling">→</button>
         </div>
+        <label class="class-context">
+          <span>Klas / cluster <small>voor alle leerlingen</small></span>
+          <input id="className" type="text" maxlength="60" placeholder="Bijvoorbeeld: 2B" autocomplete="off">
+        </label>
         <div class="student-actions">
           <button class="button button-ghost" id="addStudentButton">+ Nieuwe leerling</button>
           <details class="action-menu action-menu-right">
@@ -233,6 +237,6 @@
   <script src="vendor/jspdf.umd.min.js"></script>
   <script src="vendor/jspdf.plugin.autotable.min.js"></script>
   <script src="vendor/jszip.min.js"></script>
-  <script src="app.js?v=10"></script>
+  <script src="app.js?v=11"></script>
 </body>
 </html>
