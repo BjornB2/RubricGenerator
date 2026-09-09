@@ -15,10 +15,10 @@
     <nav class="header-actions" aria-label="Bestandsacties">
       <button class="button button-ghost theme-toggle" id="themeToggle" aria-label="Wissel tussen lichte en donkere modus" title="Wissel thema">◐ <span>Donker</span></button>
       <button class="button button-ghost" id="newRubric">Nieuwe rubric</button>
-      <button class="button button-ghost" id="importButton">Importeren</button>
-      <button class="button button-ghost" id="exportButton">Exporteren</button>
+      <button class="button button-ghost" id="importButton">Rubric importeren</button>
+      <button class="button button-ghost" id="exportButton">Rubric exporteren</button>
       <input type="file" id="importFile" accept="application/json,.json" hidden>
-      <button class="button button-dark" id="shareRubricButton">Deellink</button>
+      <button class="button button-dark" id="shareRubricButton">Rubric delen</button>
       <button class="button button-dark" id="fillButton">Online invullen</button>
       <button class="button button-accent" id="previewButton">PDF-preview</button>
     </nav>
@@ -67,13 +67,13 @@
     <section class="summary-panel" aria-label="Samenvatting">
       <div><span>Criteria</span><strong id="criterionCount">0</strong></div>
       <div><span>Maximale score</span><strong id="maxScore">0</strong></div>
-      <button class="button button-accent" id="previewButtonBottom">Rubric bekijken</button>
+      <button class="button button-accent" id="previewButtonBottom">PDF-preview</button>
     </section>
   </main>
 
   <section id="preview" class="preview-screen" aria-hidden="true">
     <div class="preview-toolbar no-print">
-      <button class="button button-ghost" id="backButton">← Terug naar bewerken</button>
+      <button class="button button-ghost" id="backButton">← Terug naar editor</button>
       <div class="preview-note">Download de PDF en het importbestand samen in één rubricpakket.</div>
       <div class="preview-actions"><button class="button button-accent" id="downloadPackage">Rubricpakket downloaden</button></div>
     </div>
@@ -101,9 +101,9 @@
 
   <section id="fillScreen" class="fill-screen no-print" aria-hidden="true">
     <div class="fill-toolbar">
-      <button class="button button-ghost" id="closeFillButton">← Terug naar ontwerpen</button>
+      <button class="button button-ghost" id="closeFillButton">← Terug naar editor</button>
       <div><strong id="fillProjectTitle"></strong><small>Online beoordeling</small></div>
-      <div class="fill-toolbar-actions"><button class="button button-ghost" id="shareFilledButton">Ingevulde deellink</button><button class="button button-accent" id="filledPdfButton">Ingevulde PDF</button></div>
+      <div class="fill-toolbar-actions"><button class="button button-ghost" id="shareFilledButton">Deellink voor leerling</button><button class="button button-accent" id="filledPdfButton">PDF downloaden</button></div>
     </div>
     <main class="fill-shell">
       <nav class="student-tabbar" aria-label="Leerlingen">
@@ -113,10 +113,10 @@
           <button class="student-step" id="nextStudentButton" aria-label="Volgende leerling">→</button>
         </div>
         <div class="student-actions">
-          <button class="button button-ghost" id="addStudentButton">+ Leerling</button>
-          <button class="button button-ghost" id="removeStudentButton">Verwijderen</button>
-          <button class="button button-ghost" id="downloadJsonButton">Klasbestand</button>
-          <button class="button button-dark" id="downloadAllButton">Alles downloaden</button>
+          <button class="button button-ghost" id="addStudentButton">+ Nieuwe leerling</button>
+          <button class="button button-ghost" id="removeStudentButton">Leerling verwijderen</button>
+          <button class="button button-ghost" id="downloadJsonButton">Beoordelingen exporteren</button>
+          <button class="button button-dark" id="downloadAllButton">Alle bestanden downloaden</button>
         </div>
       </nav>
       <section class="fill-identity settings-panel">

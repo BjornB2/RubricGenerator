@@ -244,7 +244,7 @@ function exportSettings() {
   const data = JSON.stringify({...state, exportedAt: new Date().toISOString()}, null, 2);
   const blob = new Blob([data], {type:'application/json'});
   const link = Object.assign(document.createElement('a'), {href: URL.createObjectURL(blob), download: `${slug(state.title) || 'rubric'}.rubric.json`});
-  link.click(); URL.revokeObjectURL(link.href); showToast('Instellingen geëxporteerd.');
+  link.click(); URL.revokeObjectURL(link.href); showToast('Rubric geëxporteerd.');
 }
 
 function buildPdf(valid, max, currentAssessment = null) {
@@ -404,7 +404,7 @@ async function downloadAllAssessments() {
   const valid = validCriteria(), completed = assessmentBook.assessments.filter(item => item.student.trim());
   if (!completed.length) { showToast('Vul eerst minimaal één leerlingnaam in.'); return; }
   const button = $('#downloadAllButton'), original = button.textContent;
-  button.disabled = true; button.textContent = 'PDF’s maken…';
+  button.disabled = true; button.textContent = 'Bestanden maken…';
   try {
     const folderName = safeName(state.title) || 'Rubric', zip = new JSZip(), folder = zip.folder(folderName);
     completed.forEach((item,index) => {
@@ -414,7 +414,7 @@ async function downloadAllAssessments() {
     folder.file(`${folderName} - beoordelingen.json`, JSON.stringify(assessmentExportData(), null, 2));
     const blob = await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}});
     const link = Object.assign(document.createElement('a'), {href:URL.createObjectURL(blob),download:`${folderName} - ingevulde rubrics.zip`});
-    link.click(); setTimeout(() => URL.revokeObjectURL(link.href),1000); showToast(`${completed.length} PDF’s gedownload.`);
+    link.click(); setTimeout(() => URL.revokeObjectURL(link.href),1000); showToast(`${completed.length} PDF’s en het klasbestand gedownload.`);
   } catch (error) { console.error(error); showToast('De gezamenlijke download is niet gelukt.'); }
   finally { button.disabled = false; button.textContent = original; }
 }
@@ -436,7 +436,7 @@ function downloadAssessmentsJson() {
   const folderName = safeName(state.title) || 'Rubric';
   const blob = new Blob([JSON.stringify(assessmentExportData(),null,2)],{type:'application/json'});
   const link = Object.assign(document.createElement('a'),{href:URL.createObjectURL(blob),download:`${folderName} - beoordelingen.json`});
-  link.click(); setTimeout(() => URL.revokeObjectURL(link.href),1000); showToast('Klasbestand gedownload.');
+  link.click(); setTimeout(() => URL.revokeObjectURL(link.href),1000); showToast('Beoordelingen geëxporteerd.');
 }
 
 async function gzipEncode(value) {
@@ -459,7 +459,8 @@ async function makeShareLink(includeAssessment) {
     const payload = {v:1,r:sharedState,...(includeAssessment ? {a:assessment} : {})};
     const encoded = await gzipEncode(JSON.stringify(payload));
     const url = `${location.origin}${location.pathname}#rubric=v1.${encoded}`;
-    await navigator.clipboard.writeText(url); showToast(`Deellink gekopieerd (${url.length} tekens).`);
+    await navigator.clipboard.writeText(url);
+    showToast(`${includeAssessment ? 'Deellink voor leerling' : 'Deellink naar rubric'} gekopieerd (${url.length} tekens).`);
   } catch (error) { console.error(error); showToast('Deellink maken is niet gelukt.'); }
 }
 
