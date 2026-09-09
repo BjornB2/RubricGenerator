@@ -31,7 +31,12 @@ function loadAssessment() {
 function validCriteria() { return state.criteria.filter(item => item.title.trim() || item.levels.some(x => x.trim())); }
 function maxPoints(criteria = validCriteria()) { return criteria.reduce((sum, item) => sum + item.weight * 2, 0); }
 function assessmentScore(criteria = validCriteria(), current = assessment) { return criteria.reduce((sum,item) => sum + (Number.isInteger(current.choices?.[item.id]) ? current.choices[item.id] * item.weight : 0), 0); }
-function gradeFor(score, max) { return max ? Math.max(1,Math.min(10,Math.round((1 + score / max * 9) * 2) / 2)) : 1; }
+function gradeFor(score, max) {
+  if (!max) return 1;
+  const ratio = Math.max(0, Math.min(1, score / max));
+  const grade = ratio <= .5 ? 1 + ratio * 10 : 6 + (ratio - .5) * 8;
+  return Math.max(1, Math.min(10, Math.round(grade * 2) / 2));
+}
 
 function normalizeState(input) {
   if (!input || typeof input !== 'object') return defaultState();
@@ -158,7 +163,7 @@ list.addEventListener('click', event => {
 function gradeBands(max) {
   return Array.from({length: 19}, (_, i) => {
     const grade = 1 + i * .5;
-    const values = Array.from({length: max + 1}, (_, score) => score).filter(score => Math.max(1, Math.min(10, Math.round((1 + score / max * 9) * 2) / 2)) === grade);
+    const values = Array.from({length: max + 1}, (_, score) => score).filter(score => gradeFor(score, max) === grade);
     if (!values.length) return { grade: String(grade).replace('.', ','), range: '—' };
     const first = values[0], last = values.at(-1);
     return { grade: String(grade).replace('.', ','), range: first === last ? `${first}` : `${first}–${last}` };
