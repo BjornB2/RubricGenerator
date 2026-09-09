@@ -12,6 +12,8 @@ const defaultState = () => ({
 
 let state = loadState();
 let assessment = loadAssessment();
+let sharedLinkMode = false;
+let previewAssessment = null;
 let saveTimer;
 const $ = (selector) => document.querySelector(selector);
 const list = $('#criteriaList');
@@ -187,6 +189,11 @@ function openPreview(currentAssessment = null) {
   $('#previewTeacher').textContent = currentAssessment?.teacher || '';
   $('#previewTotal').textContent = total;
   $('#previewGrade').textContent = currentAssessment ? String(gradeFor(total,max)).replace('.',',') : '';
+  previewAssessment = currentAssessment;
+  $('#downloadPackage').textContent = sharedLinkMode ? 'PDF downloaden' : 'Rubricpakket downloaden';
+  $('.preview-note').textContent = sharedLinkMode
+    ? 'Gedeelde rubric — gegevens uit deze link worden niet online opgeslagen.'
+    : 'Download de PDF en het importbestand samen in één rubricpakket.';
   const bands = gradeBands(max);
   $('#gradeScale').style.gridTemplateColumns = `27mm repeat(${bands.length},1fr)`;
   $('#gradeScale').innerHTML = `<div class="scale-label"><b>Behaalde punten</b><span>Cijfer</span></div>${bands.map(x => `<div class="grade-cell"><b>${x.range}</b><span>${x.grade}</span></div>`).join('')}`;
@@ -291,6 +298,14 @@ async function downloadPackage() {
   finally { button.disabled = false; button.textContent = original; }
 }
 
+function downloadPreviewPdf() {
+  const valid = validCriteria();
+  if (!valid.length) { showToast('Deze rubric bevat geen criteria.'); return; }
+  const studentSuffix = previewAssessment?.student ? ` - ${safeName(previewAssessment.student)}` : '';
+  buildPdf(valid, maxPoints(valid), previewAssessment).save(`${safeName(state.title) || 'Rubric'}${studentSuffix}.pdf`);
+  showToast('PDF gedownload.');
+}
+
 function safeName(value) { return String(value).trim().replace(/[<>:"/\\|?*\x00-\x1F]/g,'-').replace(/[. ]+$/,'').slice(0,80); }
 
 function openFill() {
@@ -345,10 +360,14 @@ async function loadSharedLink() {
   const match = location.hash.match(/^#rubric=v1\.([A-Za-z0-9_-]+)$/); if (!match) return;
   try {
     const payload = JSON.parse(await gzipDecode(match[1]));
-    state = normalizeState(payload.r); renderEditor();
+    state = normalizeState(payload.r); sharedLinkMode = true; renderEditor();
     if (payload.a) assessment = {...payload.a,choices:payload.a.choices || {}};
-    openPreview(payload.a || null);
-    $('.preview-note').textContent = 'Gedeelde rubric — gegevens uit deze link worden niet online opgeslagen.';
+    if (payload.a) openPreview(payload.a);
+    else {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      history.replaceState(null, '', `${location.pathname}${location.search}`);
+      showToast('Gedeelde rubric geopend in de editor.');
+    }
   } catch (error) { console.error(error); showToast('Deze deellink kan niet worden gelezen.'); }
 }
 
@@ -357,14 +376,14 @@ function showToast(message) { const toast = $('#toast'); toast.textContent = mes
 
 $('#importFile').addEventListener('change', async event => {
   const file = event.target.files[0]; if (!file) return;
-  try { state = normalizeState(JSON.parse(await file.text())); renderEditor(); scheduleSave(); showToast('Rubric geïmporteerd.'); }
+  try { state = normalizeState(JSON.parse(await file.text())); sharedLinkMode = false; renderEditor(); scheduleSave(); showToast('Rubric geïmporteerd.'); }
   catch { showToast('Dit bestand is geen geldige rubric.'); }
   event.target.value = '';
 });
 
 $('#newRubric').addEventListener('click', () => {
   if (!confirm('Een nieuwe rubric starten? De huidige versie blijft alleen behouden als je die eerst exporteert.')) return;
-  state = defaultState(); renderEditor(); scheduleSave();
+  state = defaultState(); sharedLinkMode = false; renderEditor(); scheduleSave();
 });
 $('#importButton').addEventListener('click', () => $('#importFile').click());
 $('#themeToggle').addEventListener('click', () => { state.theme = state.theme === 'dark' ? 'light' : 'dark'; applyTheme(); scheduleSave(); });
@@ -376,7 +395,7 @@ $('#addCriterionBottom').addEventListener('click', () => addCriterion());
 $('#previewButton').addEventListener('click', () => openPreview());
 $('#previewButtonBottom').addEventListener('click', () => openPreview());
 $('#backButton').addEventListener('click', closePreview);
-$('#downloadPackage').addEventListener('click', downloadPackage);
+$('#downloadPackage').addEventListener('click', () => sharedLinkMode ? downloadPreviewPdf() : downloadPackage());
 $('#closeFillButton').addEventListener('click', closeFill);
 $('#shareFilledButton').addEventListener('click', () => makeShareLink(true));
 $('#filledPdfButton').addEventListener('click', () => {
