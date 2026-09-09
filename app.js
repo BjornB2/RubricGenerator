@@ -124,12 +124,13 @@ function escapeHtml(value) {
 function criterionTemplate(item, index) {
   return `<article class="criterion-card" data-id="${item.id}">
     <div class="criterion-top">
+      <button class="drag-handle" type="button" draggable="true" title="Versleep criterium" aria-label="Versleep criterium ${index + 1}" aria-roledescription="sleepgreep">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="7" cy="5" r="1.5"/><circle cx="13" cy="5" r="1.5"/><circle cx="7" cy="10" r="1.5"/><circle cx="13" cy="10" r="1.5"/><circle cx="7" cy="15" r="1.5"/><circle cx="13" cy="15" r="1.5"/></svg>
+      </button>
       <input class="criterion-title" data-field="title" value="${escapeHtml(item.title)}" maxlength="100" aria-label="Naam criterium ${index + 1}" placeholder="Criterium ${index + 1}, bijvoorbeeld: Afwerking">
       <div class="icon-actions">
-        <button class="icon-button move-up" title="Omhoog" aria-label="Criterium omhoog">↑</button>
-        <button class="icon-button move-down" title="Omlaag" aria-label="Criterium omlaag">↓</button>
-        <button class="icon-button duplicate" title="Dupliceren" aria-label="Criterium dupliceren">⧉</button>
-        <button class="icon-button delete" title="Verwijderen" aria-label="Criterium verwijderen">×</button>
+        <button class="icon-button duplicate" type="button" title="Dupliceren" aria-label="Criterium dupliceren"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="11" height="11" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg></button>
+        <button class="icon-button delete" type="button" title="Verwijderen" aria-label="Criterium verwijderen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3m3 0-1 13H7L6 7m4 4v5m4-5v5"/></svg></button>
       </div>
     </div>
     <div class="criterion-body">
@@ -181,6 +182,97 @@ function moveCriterion(index, delta) {
   renderEditor(); scheduleSave();
 }
 
+let draggedCriterionId = null;
+
+function reorderCriterion(sourceId, targetId, placeAfter) {
+  if (!sourceId || sourceId === targetId) return;
+  const sourceIndex = state.criteria.findIndex(item => item.id === sourceId);
+  if (sourceIndex < 0) return;
+  const [source] = state.criteria.splice(sourceIndex, 1);
+  const targetIndex = state.criteria.findIndex(item => item.id === targetId);
+  if (targetIndex < 0) { state.criteria.splice(sourceIndex, 0, source); return; }
+  state.criteria.splice(targetIndex + (placeAfter ? 1 : 0), 0, source);
+  renderEditor(); scheduleSave();
+}
+
+list.addEventListener('dragstart', event => {
+  const handle = event.target.closest('.drag-handle');
+  const card = handle?.closest('.criterion-card');
+  if (!card) { event.preventDefault(); return; }
+  draggedCriterionId = card.dataset.id;
+  event.dataTransfer.effectAllowed = 'move';
+  event.dataTransfer.setData('text/plain', draggedCriterionId);
+  requestAnimationFrame(() => card.classList.add('is-dragging'));
+});
+
+list.addEventListener('dragover', event => {
+  const card = event.target.closest('.criterion-card');
+  if (!card || card.dataset.id === draggedCriterionId) return;
+  event.preventDefault();
+  event.dataTransfer.dropEffect = 'move';
+  list.querySelectorAll('.drop-before,.drop-after').forEach(item => item.classList.remove('drop-before','drop-after'));
+  card.classList.add(event.clientY < card.getBoundingClientRect().top + card.offsetHeight / 2 ? 'drop-before' : 'drop-after');
+});
+
+list.addEventListener('drop', event => {
+  const card = event.target.closest('.criterion-card');
+  if (!card) return;
+  event.preventDefault();
+  const placeAfter = event.clientY >= card.getBoundingClientRect().top + card.offsetHeight / 2;
+  reorderCriterion(draggedCriterionId || event.dataTransfer.getData('text/plain'), card.dataset.id, placeAfter);
+});
+
+list.addEventListener('dragend', () => {
+  draggedCriterionId = null;
+  list.querySelectorAll('.is-dragging,.drop-before,.drop-after').forEach(item => item.classList.remove('is-dragging','drop-before','drop-after'));
+});
+
+let touchDrag = null;
+
+list.addEventListener('pointerdown', event => {
+  if (event.pointerType === 'mouse') return;
+  const handle = event.target.closest('.drag-handle');
+  const card = handle?.closest('.criterion-card');
+  if (!card) return;
+  touchDrag = {pointerId:event.pointerId,sourceId:card.dataset.id,startY:event.clientY,targetId:null,placeAfter:false,active:false};
+  handle.setPointerCapture?.(event.pointerId);
+});
+
+list.addEventListener('pointermove', event => {
+  if (!touchDrag || event.pointerId !== touchDrag.pointerId) return;
+  if (!touchDrag.active && Math.abs(event.clientY - touchDrag.startY) < 7) return;
+  touchDrag.active = true; event.preventDefault();
+  list.querySelector(`[data-id="${touchDrag.sourceId}"]`)?.classList.add('is-dragging');
+  const card = document.elementFromPoint(event.clientX,event.clientY)?.closest('.criterion-card');
+  list.querySelectorAll('.drop-before,.drop-after').forEach(item => item.classList.remove('drop-before','drop-after'));
+  if (!card || card.dataset.id === touchDrag.sourceId) { touchDrag.targetId = null; return; }
+  touchDrag.targetId = card.dataset.id;
+  touchDrag.placeAfter = event.clientY >= card.getBoundingClientRect().top + card.offsetHeight / 2;
+  card.classList.add(touchDrag.placeAfter ? 'drop-after' : 'drop-before');
+});
+
+function finishTouchDrag(event) {
+  if (!touchDrag || event.pointerId !== touchDrag.pointerId) return;
+  const current = touchDrag; touchDrag = null;
+  list.querySelectorAll('.is-dragging,.drop-before,.drop-after').forEach(item => item.classList.remove('is-dragging','drop-before','drop-after'));
+  if (current.active && current.targetId) reorderCriterion(current.sourceId,current.targetId,current.placeAfter);
+}
+
+list.addEventListener('pointerup', finishTouchDrag);
+list.addEventListener('pointercancel', finishTouchDrag);
+
+list.addEventListener('keydown', event => {
+  const handle = event.target.closest('.drag-handle');
+  if (!handle || !['ArrowUp','ArrowDown'].includes(event.key)) return;
+  event.preventDefault();
+  const card = handle.closest('.criterion-card');
+  const index = state.criteria.findIndex(item => item.id === card.dataset.id);
+  const target = index + (event.key === 'ArrowUp' ? -1 : 1);
+  if (target < 0 || target >= state.criteria.length) return;
+  moveCriterion(index, target - index);
+  requestAnimationFrame(() => list.children[target]?.querySelector('.drag-handle').focus());
+});
+
 list.addEventListener('input', event => {
   const card = event.target.closest('.criterion-card');
   if (!card) return;
@@ -200,8 +292,6 @@ list.addEventListener('click', event => {
   const card = event.target.closest('.criterion-card');
   if (!button || !card) return;
   const index = state.criteria.findIndex(x => x.id === card.dataset.id);
-  if (button.classList.contains('move-up')) moveCriterion(index, -1);
-  if (button.classList.contains('move-down')) moveCriterion(index, 1);
   if (button.classList.contains('duplicate')) {
     const source = state.criteria[index];
     state.criteria.splice(index + 1, 0, {...source, id: crypto.randomUUID(), levels: [...source.levels]});
@@ -255,11 +345,12 @@ function openPreview(currentAssessment = null) {
   $('#downloadPackage').textContent = sharedLinkMode ? 'PDF downloaden' : 'Rubricpakket downloaden';
   $('.preview-note').textContent = sharedLinkMode
     ? 'Gedeelde rubric — gegevens uit deze link worden niet online opgeslagen.'
-    : 'Download de PDF en het importbestand samen in één rubricpakket.';
+    : 'Download de PDF en het rubricbestand samen in één rubricpakket.';
   const bands = gradeBands(max);
   $('#gradeScale').style.gridTemplateColumns = `27mm repeat(${bands.length},1fr)`;
   $('#gradeScale').innerHTML = `<div class="scale-label"><b>Behaalde punten</b><span>Cijfer</span></div>${bands.map(x => `<div class="grade-cell"><b>${x.range}</b><span>${x.grade}</span></div>`).join('')}`;
   $('#editor').style.display = 'none'; $('.app-header').style.display = 'none';
+  document.body.classList.add('mobile-actions-hidden');
   $('#preview').classList.add('active'); $('#preview').setAttribute('aria-hidden','false');
   document.title = `${state.title || 'Rubric'} – PDF-preview`; window.scrollTo(0,0);
 }
@@ -267,10 +358,12 @@ function openPreview(currentAssessment = null) {
 function closePreview() {
   $('#preview').classList.remove('active'); $('#preview').setAttribute('aria-hidden','true');
   $('#editor').style.display = ''; $('.app-header').style.display = '';
+  document.body.classList.remove('mobile-actions-hidden');
   document.title = 'Rubricbouwer';
 }
 
 function openHelp() {
+  closeMobileMenu(); document.body.classList.add('mobile-actions-hidden');
   $('#editor').style.display = 'none'; $('.app-header').style.display = 'none';
   $('#helpScreen').classList.add('active'); $('#helpScreen').setAttribute('aria-hidden','false');
   document.title = 'Uitleg – Rubricbouwer'; window.scrollTo(0,0);
@@ -279,6 +372,7 @@ function openHelp() {
 function closeHelp() {
   $('#helpScreen').classList.remove('active'); $('#helpScreen').setAttribute('aria-hidden','true');
   $('#editor').style.display = ''; $('.app-header').style.display = '';
+  document.body.classList.remove('mobile-actions-hidden');
   document.title = 'Rubricbouwer'; window.scrollTo(0,0);
 }
 
@@ -286,13 +380,25 @@ function applyTheme() {
   document.documentElement.dataset.theme = state.theme;
   $('#themeToggle span').textContent = state.theme === 'dark' ? 'Licht' : 'Donker';
   $('#themeToggle').setAttribute('aria-pressed', state.theme === 'dark');
+  $('#mobileThemeToggle span').textContent = state.theme === 'dark' ? 'Licht thema' : 'Donker thema';
+  $('#mobileThemeToggle').setAttribute('aria-pressed', state.theme === 'dark');
 }
 
 function exportSettings() {
   const data = JSON.stringify({...state, exportedAt: new Date().toISOString()}, null, 2);
   const blob = new Blob([data], {type:'application/json'});
   const link = Object.assign(document.createElement('a'), {href: URL.createObjectURL(blob), download: `${slug(state.title) || 'rubric'}.rubric.json`});
-  link.click(); URL.revokeObjectURL(link.href); showToast('Rubric geëxporteerd.');
+  link.click(); URL.revokeObjectURL(link.href); showToast('Rubric opgeslagen.');
+}
+
+function openRubricExportDialog() {
+  const count = assessmentBook.assessments.length;
+  $('#rubricExportAssessmentCount').textContent = `${count} beoordeling${count === 1 ? '' : 'en'}`;
+  $('#rubricExportDialog').showModal();
+}
+
+function closeRubricExportDialog() {
+  $('#rubricExportDialog').close();
 }
 
 function buildPdf(valid, max, currentAssessment = null) {
@@ -391,6 +497,7 @@ function openFill() {
     assessmentBook = {rubricTitle:state.title,activeId:first.id,assessments:[first]};
     assessment = first;
   }
+  closeMobileMenu(); document.body.classList.add('mobile-actions-hidden');
   $('#editor').style.display = 'none'; $('.app-header').style.display = 'none'; $('#preview').classList.remove('active');
   $('#fillScreen').classList.add('active'); $('#fillScreen').setAttribute('aria-hidden','false');
   $('#fillProjectTitle').textContent = state.title;
@@ -399,7 +506,7 @@ function openFill() {
 
 function closeFill() {
   $('#fillScreen').classList.remove('active'); $('#fillScreen').setAttribute('aria-hidden','true');
-  $('#editor').style.display = ''; $('.app-header').style.display = ''; document.title = 'Rubricbouwer';
+  $('#editor').style.display = ''; $('.app-header').style.display = ''; document.body.classList.remove('mobile-actions-hidden'); document.title = 'Rubricbouwer';
 }
 
 function renderFill() {
@@ -488,7 +595,7 @@ function downloadAssessmentsJson() {
   const folderName = safeName(state.title) || 'Rubric';
   const blob = new Blob([JSON.stringify(assessmentExportData(),null,2)],{type:'application/json'});
   const link = Object.assign(document.createElement('a'),{href:URL.createObjectURL(blob),download:`${folderName} - beoordelingen.json`});
-  link.click(); setTimeout(() => URL.revokeObjectURL(link.href),1000); showToast('Beoordelingen geëxporteerd.');
+  link.click(); setTimeout(() => URL.revokeObjectURL(link.href),1000); showToast('Klasbestand opgeslagen.');
 }
 
 async function gzipEncode(value) {
@@ -536,6 +643,29 @@ async function loadSharedLink() {
 function slug(value) { return String(value).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,''); }
 function showToast(message) { const toast = $('#toast'); toast.textContent = message; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2400); }
 
+function startNewRubric() {
+  if (!confirm('Een nieuwe rubric starten? De huidige versie blijft alleen behouden als je die eerst opslaat.')) return;
+  state = defaultState(); sharedLinkMode = false; resetAssessmentBook(); renderEditor(); applyTheme(); scheduleSave();
+}
+
+function openMobileMenu() {
+  const menu = $('#mobileMenu');
+  menu.hidden = false; document.body.classList.add('mobile-menu-open');
+  $('#mobileMenuToggle').setAttribute('aria-expanded','true');
+  requestAnimationFrame(() => $('#mobileMenuClose').focus());
+}
+
+function closeMobileMenu() {
+  const menu = $('#mobileMenu');
+  if (!menu || menu.hidden) return;
+  menu.hidden = true; document.body.classList.remove('mobile-menu-open');
+  $('#mobileMenuToggle').setAttribute('aria-expanded','false');
+}
+
+function toggleTheme() {
+  state.theme = state.theme === 'dark' ? 'light' : 'dark'; applyTheme(); scheduleSave();
+}
+
 $('#importFile').addEventListener('change', async event => {
   const file = event.target.files[0]; if (!file) return;
   try {
@@ -546,39 +676,38 @@ $('#importFile').addEventListener('change', async event => {
       $('#assessmentImportCount').textContent = `${count} beoordeling${count === 1 ? '' : 'en'}`;
       $('#assessmentImportDialog').showModal();
     } else {
-      importRubricOnly(payload); showToast('Rubric geïmporteerd.');
+      importRubricOnly(payload); showToast('Rubric geopend.');
     }
   }
-  catch { showToast('Dit bestand is geen geldige rubric of beoordelingenexport.'); }
+  catch { showToast('Dit bestand is geen geldige rubric en geen geldig klasbestand.'); }
   event.target.value = '';
 });
 
-$('#newRubric').addEventListener('click', () => {
-  if (!confirm('Een nieuwe rubric starten? De huidige versie blijft alleen behouden als je die eerst exporteert.')) return;
-  state = defaultState(); sharedLinkMode = false; resetAssessmentBook(); renderEditor(); applyTheme(); scheduleSave();
-});
+$('#newRubric').addEventListener('click', startNewRubric);
 $('#importButton').addEventListener('click', () => $('#importFile').click());
 $('#cancelAssessmentImport').addEventListener('click', closeAssessmentImportDialog);
 $('#assessmentImportDialog').addEventListener('cancel', () => { pendingAssessmentImport = null; });
 $('#importRubricOnly').addEventListener('click', () => {
   if (!pendingAssessmentImport) return;
-  importRubricOnly(pendingAssessmentImport); closeAssessmentImportDialog(); showToast('Alleen de rubric is geïmporteerd.');
+  importRubricOnly(pendingAssessmentImport); closeAssessmentImportDialog(); showToast('Alleen de rubric is geopend.');
 });
 $('#importRubricAndAssessments').addEventListener('click', () => {
   if (!pendingAssessmentImport) return;
   const payload = pendingAssessmentImport; restoreAssessmentExport(payload); closeAssessmentImportDialog();
-  showToast(`${assessmentBook.assessments.length} beoordelingen geïmporteerd.`);
+  showToast(`${assessmentBook.assessments.length} beoordelingen geopend.`);
 });
 $('#helpButton').addEventListener('click', openHelp);
 $('#closeHelpButton').addEventListener('click', closeHelp);
-$('#themeToggle').addEventListener('click', () => { state.theme = state.theme === 'dark' ? 'light' : 'dark'; applyTheme(); scheduleSave(); });
-$('#exportButton').addEventListener('click', exportSettings);
+$('#themeToggle').addEventListener('click', toggleTheme);
+$('#exportButton').addEventListener('click', openRubricExportDialog);
+$('#cancelRubricExport').addEventListener('click', closeRubricExportDialog);
+$('#rubricExportDialog').addEventListener('cancel', closeRubricExportDialog);
+$('#exportRubricOnly').addEventListener('click', () => { closeRubricExportDialog(); exportSettings(); });
+$('#exportRubricAndAssessments').addEventListener('click', () => { closeRubricExportDialog(); downloadAssessmentsJson(); });
 $('#shareRubricButton').addEventListener('click', () => makeShareLink(false));
 $('#fillButton').addEventListener('click', openFill);
-$('#addCriterion').addEventListener('click', () => addCriterion());
 $('#addCriterionBottom').addEventListener('click', () => addCriterion());
 $('#previewButton').addEventListener('click', () => openPreview());
-$('#previewButtonBottom').addEventListener('click', () => openPreview());
 $('#backButton').addEventListener('click', closePreview);
 $('#downloadPackage').addEventListener('click', () => sharedLinkMode ? downloadPreviewPdf() : downloadPackage());
 $('#closeFillButton').addEventListener('click', closeFill);
@@ -595,8 +724,8 @@ $('#assessmentImportFile').addEventListener('change', async event => {
     const payload = JSON.parse(await file.text());
     if (payload?.type !== 'rubricbouwer-beoordelingen') throw new Error('Geen beoordelingenexport');
     restoreAssessmentExport(payload); openFill();
-    showToast(`${assessmentBook.assessments.length} beoordelingen geïmporteerd.`);
-  } catch { showToast('Dit bestand is geen geldige beoordelingenexport.'); }
+    showToast(`${assessmentBook.assessments.length} beoordelingen geopend.`);
+  } catch { showToast('Dit bestand is geen geldig klasbestand.'); }
   event.target.value = '';
 });
 $('#downloadJsonButton').addEventListener('click', downloadAssessmentsJson);
@@ -605,6 +734,28 @@ $('#filledPdfButton').addEventListener('click', () => {
   const valid = validCriteria(); if (!assessment.student.trim()) { showToast('Vul eerst de voornaam van de leerling in.'); return; }
   if (!isAssessmentComplete(assessment,valid)) { showToast('Vul eerst alle criteria voor deze leerling in.'); return; }
   buildPdf(valid,maxPoints(valid),assessment).save(`${safeName(state.title)} - ${safeName(assessment.student)}.pdf`);
+});
+
+$('#mobileMenuToggle').addEventListener('click', openMobileMenu);
+$('#mobileMenuClose').addEventListener('click', closeMobileMenu);
+$('.mobile-menu-backdrop').addEventListener('click', closeMobileMenu);
+$('#mobileNewRubric').addEventListener('click', () => { closeMobileMenu(); startNewRubric(); });
+$('#mobileImportRubric').addEventListener('click', () => { closeMobileMenu(); $('#importFile').click(); });
+$('#mobileExportRubric').addEventListener('click', () => { closeMobileMenu(); openRubricExportDialog(); });
+$('#mobileShareRubric').addEventListener('click', () => { closeMobileMenu(); makeShareLink(false); });
+$('#mobileThemeToggle').addEventListener('click', () => { toggleTheme(); closeMobileMenu(); });
+$('#mobileHelpButton').addEventListener('click', () => { closeMobileMenu(); openHelp(); });
+$('#mobileFillButton').addEventListener('click', openFill);
+$('#mobilePreviewButton').addEventListener('click', () => openPreview());
+
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape' && !$('#mobileMenu').hidden) { closeMobileMenu(); $('#mobileMenuToggle').focus(); }
+});
+
+document.addEventListener('click', event => {
+  document.querySelectorAll('.action-menu[open]').forEach(menu => {
+    if (!menu.contains(event.target) || event.target.closest('.action-menu-panel button')) menu.removeAttribute('open');
+  });
 });
 $('#studentName').addEventListener('input', event => { assessment.student=event.target.value; renderFill(); });
 $('#teacherName').addEventListener('input', event => { assessment.teacher=event.target.value; renderFill(); });

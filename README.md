@@ -9,10 +9,10 @@ Een statische, Nederlandstalige webtool voor het ontwerpen en printen van rubric
 - een cijferbalk van 1 tot en met 10 in stappen van een half punt;
 - een lichte en donkere editorweergave, met een altijd lichte printversie;
 - automatische opslag in `localStorage`;
-- import en export van `.rubric.json`-instellingen;
+- openen en opslaan van `.rubric.json`-instellingen;
 - liggende A4-printweergave met invulregels, omcirkelbare scores en cijferbalk;
 - geschikt voor GitHub Pages, zonder buildstap of externe afhankelijkheden.
-- download van een ZIP-map met zowel de printklare PDF als het importbestand.
+- download van een ZIP-map met zowel de printklare PDF als het rubricbestand.
 
 ## Publiceren via GitHub Pages
 

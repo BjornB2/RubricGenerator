@@ -13,25 +13,53 @@
   <meta name="twitter:title" content="Gedeelde rubric bekijken | Rubricbouwer">
   <meta name="twitter:description" content="Open deze gedeelde rubric om de criteria, beoordeling en het eindcijfer te bekijken.">
   <title>Rubricbouwer</title>
-  <link rel="stylesheet" href="styles.css?v=6">
+  <link rel="stylesheet" href="styles.css?v=10">
 </head>
 <body>
   <header class="app-header no-print">
     <a class="brand" href="#editor" aria-label="Rubricbouwer start">
       <span><strong>Rubricbouwer</strong><small>van criterium naar printklare rubric</small></span>
     </a>
+    <button class="mobile-menu-toggle" id="mobileMenuToggle" type="button" aria-label="Menu openen" aria-controls="mobileMenu" aria-expanded="false"><span></span><span></span><span></span></button>
     <nav class="header-actions" aria-label="Bestandsacties">
-      <button class="button button-ghost theme-toggle" id="themeToggle" aria-label="Wissel tussen lichte en donkere modus" title="Wissel thema">◐ <span>Donker</span></button>
-      <button class="button button-ghost" id="helpButton">Uitleg</button>
-      <button class="button button-ghost" id="newRubric">Nieuwe rubric</button>
-      <button class="button button-ghost" id="importButton">Rubric importeren</button>
-      <button class="button button-ghost" id="exportButton">Rubric exporteren</button>
-      <input type="file" id="importFile" accept="application/json,.json" hidden>
-      <button class="button button-dark" id="shareRubricButton">Rubric delen</button>
       <button class="button button-dark" id="fillButton">Online invullen</button>
       <button class="button button-accent" id="previewButton">PDF-preview</button>
+      <button class="button button-ghost" id="helpButton">Uitleg</button>
+      <button class="button button-ghost theme-toggle" id="themeToggle" aria-label="Wissel tussen lichte en donkere modus" title="Wissel thema">◐ <span>Donker</span></button>
+      <details class="action-menu">
+        <summary class="button button-ghost">Rubric beheren <span aria-hidden="true">⌄</span></summary>
+        <div class="action-menu-panel">
+          <button type="button" id="newRubric" aria-label="Nieuwe rubric">Nieuwe rubric</button>
+          <button type="button" id="importButton" aria-label="Rubric openen">Rubric openen</button>
+          <button type="button" id="exportButton" aria-label="Rubric opslaan">Rubric opslaan</button>
+          <button type="button" id="shareRubricButton" aria-label="Rubric delen">Rubric delen</button>
+        </div>
+      </details>
+      <input type="file" id="importFile" accept="application/json,.json" hidden>
     </nav>
   </header>
+
+  <div class="mobile-menu-layer no-print" id="mobileMenu" hidden>
+    <button class="mobile-menu-backdrop" type="button" aria-label="Menu sluiten"></button>
+    <aside class="mobile-menu-panel" aria-label="Mobiel menu">
+      <div class="mobile-menu-head"><strong>Menu</strong><button type="button" id="mobileMenuClose" aria-label="Menu sluiten">×</button></div>
+      <section><h2>Rubric</h2>
+        <button type="button" id="mobileNewRubric">Nieuwe rubric</button>
+        <button type="button" id="mobileImportRubric">Rubric openen</button>
+        <button type="button" id="mobileExportRubric">Rubric opslaan</button>
+        <button type="button" id="mobileShareRubric">Delen met collega</button>
+      </section>
+      <section><h2>Weergave</h2>
+        <button type="button" id="mobileThemeToggle" aria-label="Wissel tussen lichte en donkere modus">◐ <span>Donker thema</span></button>
+        <button type="button" id="mobileHelpButton">Uitleg</button>
+      </section>
+    </aside>
+  </div>
+
+  <nav class="mobile-bottom-bar no-print" aria-label="Snelle acties">
+    <button type="button" id="mobileFillButton">Invullen</button>
+    <button type="button" id="mobilePreviewButton">PDF-preview</button>
+  </nav>
 
   <main id="editor" class="editor-shell no-print">
     <section class="intro-panel">
@@ -67,7 +95,6 @@
     <section class="criteria-section" aria-labelledby="criteriaHeading">
       <div class="section-heading section-heading-row">
         <div class="heading-group"><span class="step">02</span><div><h2 id="criteriaHeading">Criteria</h2><p>De score per rij is 0, het gewicht, of tweemaal het gewicht.</p></div></div>
-        <button class="button button-dark" id="addCriterion">+ Criterium toevoegen</button>
       </div>
       <div id="criteriaList" class="criteria-list"></div>
       <button class="add-card" id="addCriterionBottom"><span>+</span> Nog een criterium toevoegen</button>
@@ -76,7 +103,6 @@
     <section class="summary-panel" aria-label="Samenvatting">
       <div><span>Criteria</span><strong id="criterionCount">0</strong></div>
       <div><span>Maximale score</span><strong id="maxScore">0</strong></div>
-      <button class="button button-accent" id="previewButtonBottom">PDF-preview</button>
     </section>
   </main>
 
@@ -102,9 +128,9 @@
 
       <section class="help-grid">
         <article><h2>Meerdere leerlingen</h2><p>Voeg leerlingen toe met <strong>Nieuwe leerling</strong>. Gebruik de pijlen of de keuzelijst om door de klas te gaan. Een vinkje betekent dat alle criteria voor die leerling zijn ingevuld.</p></article>
-        <article><h2>Delen met een collega</h2><p><strong>Rubric delen</strong> kopieert een link met het volledige ontwerp erin. Een collega opent de link in de browser en krijgt direct een eigen lokale kopie in de editor. Wijzigingen in die kopie veranderen jouw rubric niet. Na aanpassingen moet de collega de rubric opnieuw exporteren of een nieuwe deellink maken om de gewijzigde versie verder te delen.</p></article>
+        <article><h2>Delen met een collega</h2><p><strong>Rubric delen</strong> kopieert een link met het volledige ontwerp erin. Een collega opent de link in de browser en krijgt direct een eigen lokale kopie in de editor. Wijzigingen in die kopie veranderen jouw rubric niet. Na aanpassingen moet de collega de rubric opnieuw opslaan of een nieuwe deellink maken om de gewijzigde versie verder te delen.</p></article>
         <article><h2>Delen met een leerling</h2><p>Na een volledige beoordeling kopieert <strong>Deellink voor leerling</strong> een alleen-lezen weergave met een PDF-knop. De leerling krijgt geen toegang tot de editor of andere leerlingen.</p></article>
-        <article><h2>Bewaren, exporteren en importeren</h2><p>Je werk wordt automatisch in deze browser bewaard. <strong>Rubric exporteren</strong> bewaart alleen het ontwerp; <strong>Beoordelingen exporteren</strong> bewaart de rubric en de hele klas. Importeer je zo’n klasbestand in de editor, dan kies je of je alleen de rubric of ook de beoordelingen terugzet. Op de invulpagina zet <strong>Beoordelingen importeren</strong> de volledige klas terug. <strong>Alle PDF’s downloaden</strong> maakt één ZIP met alle voltooide leerling-PDF’s en het klasbestand.</p></article>
+        <article><h2>Bewaren, openen en opslaan</h2><p>Je werk wordt automatisch in deze browser bewaard. Met <strong>Rubric opslaan</strong> bewaar je een bestand op je apparaat; je kiest daarbij of de beoordelingen meegaan. Open je een klasbestand in de editor, dan kies je of je alleen de rubric of ook de beoordelingen terugzet. Op de invulpagina opent <strong>Klasbestand openen</strong> de volledige klas. <strong>Klasbestand opslaan</strong> bewaart de rubric en alle beoordelingen. <strong>Alle PDF’s downloaden</strong> maakt één ZIP met alle voltooide leerling-PDF’s en het klasbestand.</p></article>
         <article><h2>Hoe ontstaat het cijfer?</h2><p>Als je bij ieder criterium het middelste niveau kiest, is het eindcijfer precies een 6,0. Alles op het laagste niveau geeft een 1,0 en alles op het hoogste niveau een 10. Tussenliggende resultaten worden afgerond op halve cijfers.</p></article>
         <article><h2>Waarom zijn deellinks zo lang?</h2><p>Er wordt niets in een database of op een server opgeslagen. Daarom zit de volledige rubric — en bij een leerlinglink ook de ingevulde beoordeling — samengeperst in de link zelf. Meer criteria en langere beschrijvingen maken de link langer. Deel een ingevulde link alleen met de bedoelde leerling.</p></article>
       </section>
@@ -116,7 +142,7 @@
   <section id="preview" class="preview-screen" aria-hidden="true">
     <div class="preview-toolbar no-print">
       <button class="button button-ghost" id="backButton">← Terug naar editor</button>
-      <div class="preview-note">Download de PDF en het importbestand samen in één rubricpakket.</div>
+      <div class="preview-note">Download de PDF en het rubricbestand samen in één rubricpakket.</div>
       <div class="preview-actions"><button class="button button-accent" id="downloadPackage">Rubricpakket downloaden</button></div>
     </div>
     <article class="rubric-page" id="rubricPage">
@@ -156,11 +182,16 @@
         </div>
         <div class="student-actions">
           <button class="button button-ghost" id="addStudentButton">+ Nieuwe leerling</button>
-          <button class="button button-ghost" id="removeStudentButton">Leerling verwijderen</button>
-          <button class="button button-ghost" id="importAssessmentsButton">Beoordelingen importeren</button>
+          <details class="action-menu action-menu-right">
+            <summary class="button button-ghost">Klas beheren <span aria-hidden="true">⌄</span></summary>
+            <div class="action-menu-panel">
+              <button type="button" id="removeStudentButton" aria-label="Leerling verwijderen">Leerling verwijderen</button>
+              <button type="button" id="importAssessmentsButton" aria-label="Klasbestand openen">Klasbestand openen</button>
+              <button type="button" id="downloadJsonButton" aria-label="Klasbestand opslaan">Klasbestand opslaan</button>
+              <button type="button" id="downloadAllButton" aria-label="Alle PDF’s downloaden">Alle PDF’s downloaden</button>
+            </div>
+          </details>
           <input type="file" id="assessmentImportFile" accept="application/json,.json" hidden>
-          <button class="button button-ghost" id="downloadJsonButton">Beoordelingen exporteren</button>
-          <button class="button button-dark" id="downloadAllButton">Alle PDF’s downloaden</button>
         </div>
       </nav>
       <section class="fill-identity settings-panel">
@@ -174,13 +205,26 @@
 
   <dialog class="import-dialog" id="assessmentImportDialog" aria-labelledby="assessmentImportTitle">
     <div class="import-dialog-content">
-      <p class="eyebrow">Beoordelingenbestand</p>
-      <h2 id="assessmentImportTitle">Wat wil je importeren?</h2>
+      <p class="eyebrow">Klasbestand openen</p>
+      <h2 id="assessmentImportTitle">Wat wil je openen?</h2>
       <p>Dit bestand bevat een rubric en <strong id="assessmentImportCount">0 beoordelingen</strong>. Kies welke gegevens je in deze browser wilt openen.</p>
       <div class="import-dialog-actions">
         <button class="button button-ghost" id="cancelAssessmentImport">Annuleren</button>
-        <button class="button button-dark" id="importRubricOnly">Alleen rubric</button>
-        <button class="button button-accent" id="importRubricAndAssessments">Rubric en beoordelingen</button>
+        <button class="button button-dark" id="importRubricOnly">Alleen rubric openen</button>
+        <button class="button button-accent" id="importRubricAndAssessments">Rubric en beoordelingen openen</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog class="import-dialog" id="rubricExportDialog" aria-labelledby="rubricExportTitle">
+    <div class="import-dialog-content">
+      <p class="eyebrow">Rubric opslaan</p>
+      <h2 id="rubricExportTitle">Beoordelingen meenemen?</h2>
+      <p>Wil je alleen het rubricontwerp opslaan, of ook <strong id="rubricExportAssessmentCount">0 beoordelingen</strong> meenemen?</p>
+      <div class="import-dialog-actions">
+        <button class="button button-ghost" id="cancelRubricExport">Annuleren</button>
+        <button class="button button-dark" id="exportRubricOnly">Alleen rubric opslaan</button>
+        <button class="button button-accent" id="exportRubricAndAssessments">Rubric en beoordelingen opslaan</button>
       </div>
     </div>
   </dialog>
@@ -189,6 +233,6 @@
   <script src="vendor/jspdf.umd.min.js"></script>
   <script src="vendor/jspdf.plugin.autotable.min.js"></script>
   <script src="vendor/jszip.min.js"></script>
-  <script src="app.js?v=6"></script>
+  <script src="app.js?v=10"></script>
 </body>
 </html>
