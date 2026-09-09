@@ -202,8 +202,8 @@ function buildPdf(valid, max) {
   pdf.setTextColor(...navy); pdf.setFontSize(18);
   pdf.text(state.title.trim(), 14, 22);
   pdf.setDrawColor(...orange); pdf.setLineWidth(.45); pdf.line(14, 26, 283, 26);
-  pdf.setFontSize(8); pdf.text('Eindcijfer', 231, 14);
-  pdf.setDrawColor(...orange); pdf.setLineWidth(.6); pdf.roundedRect(250, 7, 33, 17, 1.5, 1.5);
+  pdf.setFontSize(7.5); pdf.text('Eindcijfer', 241, 14);
+  pdf.setDrawColor(...orange); pdf.setLineWidth(.5); pdf.roundedRect(259, 8, 24, 12, 1.4, 1.4);
   pdf.setDrawColor(82,101,109); pdf.setLineWidth(.25);
   pdf.text('Naam leerling', 14, 35); pdf.line(38, 35, 142, 35);
   pdf.text('Docent', 154, 35); pdf.line(169, 35, 283, 35);
