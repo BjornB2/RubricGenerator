@@ -234,6 +234,18 @@ function closePreview() {
   document.title = 'Rubricbouwer';
 }
 
+function openHelp() {
+  $('#editor').style.display = 'none'; $('.app-header').style.display = 'none';
+  $('#helpScreen').classList.add('active'); $('#helpScreen').setAttribute('aria-hidden','false');
+  document.title = 'Uitleg – Rubricbouwer'; window.scrollTo(0,0);
+}
+
+function closeHelp() {
+  $('#helpScreen').classList.remove('active'); $('#helpScreen').setAttribute('aria-hidden','true');
+  $('#editor').style.display = ''; $('.app-header').style.display = '';
+  document.title = 'Rubricbouwer'; window.scrollTo(0,0);
+}
+
 function applyTheme() {
   document.documentElement.dataset.theme = state.theme;
   $('#themeToggle span').textContent = state.theme === 'dark' ? 'Licht' : 'Donker';
@@ -494,6 +506,8 @@ $('#newRubric').addEventListener('click', () => {
   state = defaultState(); sharedLinkMode = false; renderEditor(); scheduleSave();
 });
 $('#importButton').addEventListener('click', () => $('#importFile').click());
+$('#helpButton').addEventListener('click', openHelp);
+$('#closeHelpButton').addEventListener('click', closeHelp);
 $('#themeToggle').addEventListener('click', () => { state.theme = state.theme === 'dark' ? 'light' : 'dark'; applyTheme(); scheduleSave(); });
 $('#exportButton').addEventListener('click', exportSettings);
 $('#shareRubricButton').addEventListener('click', () => makeShareLink(false));

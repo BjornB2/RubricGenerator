@@ -14,6 +14,7 @@
     </a>
     <nav class="header-actions" aria-label="Bestandsacties">
       <button class="button button-ghost theme-toggle" id="themeToggle" aria-label="Wissel tussen lichte en donkere modus" title="Wissel thema">◐ <span>Donker</span></button>
+      <button class="button button-ghost" id="helpButton">Uitleg</button>
       <button class="button button-ghost" id="newRubric">Nieuwe rubric</button>
       <button class="button button-ghost" id="importButton">Rubric importeren</button>
       <button class="button button-ghost" id="exportButton">Rubric exporteren</button>
@@ -70,6 +71,39 @@
       <button class="button button-accent" id="previewButtonBottom">PDF-preview</button>
     </section>
   </main>
+
+  <section id="helpScreen" class="help-screen no-print" aria-hidden="true">
+    <header class="help-toolbar">
+      <button class="button button-ghost" id="closeHelpButton">← Terug naar editor</button>
+      <strong>Uitleg Rubricbouwer</strong>
+      <span></span>
+    </header>
+    <main class="help-shell">
+      <section class="help-intro">
+        <p class="eyebrow">Van ontwerp tot beoordeling</p>
+        <h1>Zo werkt de Rubricbouwer</h1>
+        <p>Maak een rubric, print hem uit of beoordeel leerlingen direct online. Alles gebeurt in je eigen browser; er is geen account of database nodig.</p>
+      </section>
+
+      <ol class="help-steps">
+        <li><span>1</span><div><h2>Maak de rubric</h2><p>Geef het project een naam en beschrijf per criterium wat onvoldoende, voldoende en goed werk is. Voeg zoveel criteria toe als nodig.</p></div></li>
+        <li><span>2</span><div><h2>Bepaal het gewicht</h2><p>De schuif heeft drie standen. Een criterium levert daardoor maximaal 2, 4 of 6 punten op. Een zwaarder criterium telt dus sterker mee.</p></div></li>
+        <li><span>3</span><div><h2>Controleer de PDF</h2><p>Open de PDF-preview om de printweergave te bekijken. Het rubricpakket bevat zowel de PDF als het rubricbestand waarmee je later verder kunt werken.</p></div></li>
+        <li><span>4</span><div><h2>Beoordeel online</h2><p>Kies <strong>Online invullen</strong>, vul leerling en docent in en klik per criterium een niveau aan. Het resultaatblok blijft tijdens het beoordelen in beeld.</p></div></li>
+      </ol>
+
+      <section class="help-grid">
+        <article><h2>Meerdere leerlingen</h2><p>Voeg leerlingen toe met <strong>Nieuwe leerling</strong>. Gebruik de pijlen of de keuzelijst om door de klas te gaan. Een vinkje betekent dat alle criteria voor die leerling zijn ingevuld.</p></article>
+        <article><h2>Delen met een collega</h2><p><strong>Rubric delen</strong> kopieert een link met het volledige ontwerp erin. Een collega opent die link direct in de editor en kan een eigen versie maken.</p></article>
+        <article><h2>Delen met een leerling</h2><p><strong>Deellink voor leerling</strong> toont alleen de ingevulde beoordeling en een PDF-knop. De leerling krijgt geen toegang tot de editor.</p></article>
+        <article><h2>Bewaren en meenemen</h2><p><strong>Rubric exporteren</strong> bewaart het ontwerp als JSON. <strong>Beoordelingen exporteren</strong> bewaart de hele klas. Met <strong>Alle bestanden downloaden</strong> krijg je alle leerling-PDF’s en het klasbestand samen.</p></article>
+        <article><h2>Hoe ontstaat het cijfer?</h2><p>Geen punten geeft een 1,0, precies de helft geeft een 6,0 en alle punten geeft een 10. Tussenliggende resultaten worden afgerond op halve cijfers.</p></article>
+        <article><h2>Privacy en opslag</h2><p>Rubrics en beoordelingen worden alleen in de lokale browseropslag bewaard. Deellinks bevatten zelf alle informatie. Deel een ingevulde link daarom alleen met de bedoelde leerling.</p></article>
+      </section>
+
+      <aside class="help-tip"><strong>Praktische tip</strong><p>Houd beschrijvingen kort en concreet. Zo blijft de rubric snel leesbaar en past een uitgebreide rubric beter op één liggend A4.</p></aside>
+    </main>
+  </section>
 
   <section id="preview" class="preview-screen" aria-hidden="true">
     <div class="preview-toolbar no-print">
