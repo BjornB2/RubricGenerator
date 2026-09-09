@@ -1,4 +1,6 @@
 const STORAGE_KEY = 'rubricbouwer.v1';
+const ASSESSMENT_KEY = 'rubricbouwer.assessment.v1';
+const ASSESSMENT_BOOK_KEY = 'rubricbouwer.assessments.v2';
 
 const blankCriterion = () => ({ id: crypto.randomUUID(), title: '', levels: ['', '', ''], weight: 1 });
 const defaultState = () => ({
@@ -10,6 +12,10 @@ const defaultState = () => ({
 });
 
 let state = loadState();
+let assessmentBook = loadAssessmentBook();
+let assessment = activeAssessment();
+let sharedLinkMode = false;
+let previewAssessment = null;
 let saveTimer;
 const $ = (selector) => document.querySelector(selector);
 const list = $('#criteriaList');
@@ -21,6 +27,36 @@ function loadState() {
   } catch { return defaultState(); }
 }
 
+function blankAssessment(teacher = '') {
+  return {id:crypto.randomUUID(),rubricTitle:state?.title || '',student:'',teacher,choices:{}};
+}
+
+function loadAssessmentBook() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(ASSESSMENT_BOOK_KEY));
+    if (Array.isArray(saved?.assessments) && saved.assessments.length) return saved;
+    const legacy = JSON.parse(localStorage.getItem(ASSESSMENT_KEY));
+    if (legacy) {
+      const migrated = {...legacy,id:legacy.id || crypto.randomUUID(),choices:legacy.choices || {}};
+      return {rubricTitle:migrated.rubricTitle || '',activeId:migrated.id,assessments:[migrated]};
+    }
+  } catch {}
+  const first = blankAssessment();
+  return {rubricTitle:'',activeId:first.id,assessments:[first]};
+}
+
+function activeAssessment() {
+  return assessmentBook.assessments.find(item => item.id === assessmentBook.activeId) || assessmentBook.assessments[0];
+}
+
+function saveAssessmentBook() {
+  assessmentBook.activeId = assessment.id;
+  localStorage.setItem(ASSESSMENT_BOOK_KEY, JSON.stringify(assessmentBook));
+}
+
+function validCriteria() { return state.criteria.filter(item => item.title.trim() || item.levels.some(x => x.trim())); }
+function maxPoints(criteria = validCriteria()) { return criteria.reduce((sum, item) => sum + item.weight * 2, 0); }
+function assessmentScore(criteria = validCriteria(), current = assessment) { return criteria.reduce((sum,item) => sum + (Number.isInteger(current.choices?.[item.id]) ? current.choices[item.id] * item.weight : 0), 0); }
 function gradeFor(score, max) {
   if (!max) return 1;
   const ratio = Math.max(0, Math.min(1, score / max));
@@ -160,8 +196,8 @@ function gradeBands(max) {
   });
 }
 
-function openPreview() {
-  const valid = state.criteria.filter(item => item.title.trim() || item.levels.some(x => x.trim()));
+function openPreview(currentAssessment = null) {
+  const valid = validCriteria();
   if (!state.title.trim()) { showToast('Vul eerst de naam van het project in.'); return; }
   if (!valid.length) { showToast('Vul eerst minimaal één criterium in.'); return; }
   $('#previewTitle').textContent = state.title.trim();
@@ -169,10 +205,21 @@ function openPreview() {
   $('#previewRows').innerHTML = valid.map(item => `<tr>
     <td>${escapeHtml(item.title.trim() || 'Naamloos criterium')}</td>
     ${item.levels.map(text => `<td>${escapeHtml(text.trim() || '—')}</td>`).join('')}
-    <td class="score-options"><span>0</span><span>${item.weight}</span><span>${item.weight * 2}</span></td>
+    <td class="score-options">${[0,1,2].map(level => `<span class="${currentAssessment?.choices?.[item.id] === level ? 'selected' : ''}">${level * item.weight}</span>`).join('')}</td>
   </tr>`).join('');
-  const max = valid.reduce((sum, item) => sum + item.weight * 2, 0);
+  const max = maxPoints(valid), total = currentAssessment ? assessmentScore(valid,currentAssessment) : '';
   $('#footerMax').textContent = max;
+  $('#previewStudent').textContent = currentAssessment?.student || '';
+  $('#previewTeacher').textContent = currentAssessment?.teacher || '';
+  $('#previewTotal').textContent = total;
+  $('#previewGrade').textContent = currentAssessment ? String(gradeFor(total,max)).replace('.',',') : '';
+  previewAssessment = currentAssessment;
+  const readOnlySharedAssessment = sharedLinkMode && Boolean(currentAssessment);
+  $('#backButton').hidden = readOnlySharedAssessment;
+  $('#downloadPackage').textContent = sharedLinkMode ? 'PDF downloaden' : 'Rubricpakket downloaden';
+  $('.preview-note').textContent = sharedLinkMode
+    ? 'Gedeelde rubric — gegevens uit deze link worden niet online opgeslagen.'
+    : 'Download de PDF en het importbestand samen in één rubricpakket.';
   const bands = gradeBands(max);
   $('#gradeScale').style.gridTemplateColumns = `27mm repeat(${bands.length},1fr)`;
   $('#gradeScale').innerHTML = `<div class="scale-label"><b>Behaalde punten</b><span>Cijfer</span></div>${bands.map(x => `<div class="grade-cell"><b>${x.range}</b><span>${x.grade}</span></div>`).join('')}`;
@@ -197,10 +244,10 @@ function exportSettings() {
   const data = JSON.stringify({...state, exportedAt: new Date().toISOString()}, null, 2);
   const blob = new Blob([data], {type:'application/json'});
   const link = Object.assign(document.createElement('a'), {href: URL.createObjectURL(blob), download: `${slug(state.title) || 'rubric'}.rubric.json`});
-  link.click(); URL.revokeObjectURL(link.href); showToast('Instellingen geëxporteerd.');
+  link.click(); URL.revokeObjectURL(link.href); showToast('Rubric geëxporteerd.');
 }
 
-function buildPdf(valid, max) {
+function buildPdf(valid, max, currentAssessment = null) {
   const { jsPDF } = window.jspdf;
   const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
   const navy = [18, 61, 85], orange = [235, 113, 70];
@@ -211,9 +258,11 @@ function buildPdf(valid, max) {
   pdf.setDrawColor(...orange); pdf.setLineWidth(.45); pdf.line(14, 26, 283, 26);
   pdf.setFontSize(7.5); pdf.text('Eindcijfer', 241, 14);
   pdf.setDrawColor(...orange); pdf.setLineWidth(.5); pdf.roundedRect(259, 8, 24, 12, 1.4, 1.4);
+  if (currentAssessment) { pdf.setTextColor(...navy); pdf.setFont('helvetica','bold'); pdf.setFontSize(12); pdf.text(String(gradeFor(assessmentScore(valid,currentAssessment),max)).replace('.',','),271,15.7,{align:'center'}); }
   pdf.setDrawColor(82,101,109); pdf.setLineWidth(.25);
   pdf.text('Naam leerling', 14, 35); pdf.line(38, 35, 142, 35);
   pdf.text('Docent', 154, 35); pdf.line(169, 35, 283, 35);
+  if (currentAssessment) { pdf.setFont('helvetica','normal'); pdf.setTextColor(...navy); pdf.text(currentAssessment.student || '',40,34); pdf.text(currentAssessment.teacher || '',171,34); }
   const headers = ['Criterium', ...state.levelNames.map((x, i) => `${i + 1} · ${x.trim() || `Niveau ${i + 1}`}`), 'Score'];
   const rows = valid.map(item => [item.title.trim() || 'Naamloos criterium', ...item.levels.map(x => x.trim() || '—'), '']);
   pdf.autoTable({
@@ -228,8 +277,11 @@ function buildPdf(valid, max) {
       const centerY = data.cell.y + data.cell.height / 2, spacing = 9;
       values.forEach((value, i) => {
         const x = data.cell.x + data.cell.width / 2 + (i - 1) * spacing;
-        pdf.setDrawColor(145,160,165); pdf.setLineWidth(.25); pdf.circle(x,centerY,3);
-        pdf.setTextColor(24,48,62); pdf.setFont('helvetica','bold'); pdf.setFontSize(6.5);
+        const selected = currentAssessment?.choices?.[item.id] === i;
+        pdf.setDrawColor(...(selected ? orange : [145,160,165])); pdf.setLineWidth(.25);
+        if (selected) pdf.setFillColor(...orange);
+        pdf.circle(x,centerY,3,selected ? 'FD' : 'S');
+        pdf.setTextColor(...(selected ? [255,255,255] : [24,48,62])); pdf.setFont('helvetica','bold'); pdf.setFontSize(6.5);
         pdf.text(String(value),x,centerY+1.1,{align:'center'});
       });
     }
@@ -238,6 +290,7 @@ function buildPdf(valid, max) {
   pdf.setTextColor(...navy); pdf.setFont('helvetica','bold'); pdf.setFontSize(7);
   pdf.text('Totaalscore',249,totalY); pdf.setDrawColor(82,101,109); pdf.line(249,totalY+5,271,totalY+5);
   pdf.setFont('helvetica','normal'); pdf.text(`/ ${max}`,274,totalY+5);
+  if (currentAssessment) { pdf.setFont('helvetica','bold'); pdf.text(String(assessmentScore(valid,currentAssessment)),260,totalY+4,{align:'center'}); }
   const bands = gradeBands(max), labelW = 27, scaleW = 230, cellW = (scaleW-labelW) / bands.length, left = (297-scaleW)/2, top = 190;
   pdf.setFillColor(...navy); pdf.rect(left,top,labelW,6,'F'); pdf.setDrawColor(187,199,202); pdf.rect(left,top,labelW,12);
   pdf.setTextColor(255); pdf.setFont('helvetica','bold'); pdf.setFontSize(4.7); pdf.text('BEHAALDE PUNTEN',left+labelW/2,top+3.9,{align:'center'});
@@ -271,31 +324,206 @@ async function downloadPackage() {
   finally { button.disabled = false; button.textContent = original; }
 }
 
+function downloadPreviewPdf() {
+  const valid = validCriteria();
+  if (!valid.length) { showToast('Deze rubric bevat geen criteria.'); return; }
+  const studentSuffix = previewAssessment?.student ? ` - ${safeName(previewAssessment.student)}` : '';
+  buildPdf(valid, maxPoints(valid), previewAssessment).save(`${safeName(state.title) || 'Rubric'}${studentSuffix}.pdf`);
+  showToast('PDF gedownload.');
+}
+
 function safeName(value) { return String(value).trim().replace(/[<>:"/\\|?*\x00-\x1F]/g,'-').replace(/[. ]+$/,'').slice(0,80); }
+
+function openFill() {
+  const valid = validCriteria();
+  if (!state.title.trim() || !valid.length) { showToast('Vul eerst de projectnaam en minimaal één criterium in.'); return; }
+  if (assessmentBook.rubricTitle !== state.title) {
+    const first = blankAssessment(assessment.teacher || '');
+    first.rubricTitle = state.title;
+    assessmentBook = {rubricTitle:state.title,activeId:first.id,assessments:[first]};
+    assessment = first;
+  }
+  $('#editor').style.display = 'none'; $('.app-header').style.display = 'none'; $('#preview').classList.remove('active');
+  $('#fillScreen').classList.add('active'); $('#fillScreen').setAttribute('aria-hidden','false');
+  $('#fillProjectTitle').textContent = state.title;
+  renderFill(); window.scrollTo(0,0);
+}
+
+function closeFill() {
+  $('#fillScreen').classList.remove('active'); $('#fillScreen').setAttribute('aria-hidden','true');
+  $('#editor').style.display = ''; $('.app-header').style.display = ''; document.title = 'Rubricbouwer';
+}
+
+function renderFill() {
+  const valid = validCriteria();
+  const activeIndex = assessmentBook.assessments.findIndex(item => item.id === assessment.id);
+  $('#studentSelect').innerHTML = assessmentBook.assessments.map((item,index) => {
+    const complete = valid.length && valid.every(criterion => Number.isInteger(item.choices?.[criterion.id]));
+    return `<option value="${item.id}" ${item.id === assessment.id ? 'selected' : ''}>${complete ? '✓' : '○'} ${index + 1}. ${escapeHtml(item.student || 'Naam nog invullen')}</option>`;
+  }).join('');
+  $('#studentCounter').textContent = `Leerling ${activeIndex + 1} van ${assessmentBook.assessments.length}`;
+  $('#previousStudentButton').disabled = activeIndex <= 0;
+  $('#nextStudentButton').disabled = activeIndex >= assessmentBook.assessments.length - 1;
+  $('#removeStudentButton').disabled = assessmentBook.assessments.length === 1;
+  $('#studentName').value = assessment.student || '';
+  $('#teacherName').value = assessment.teacher || '';
+  $('#fillCriteria').innerHTML = valid.map(item => `<article class="fill-row" data-id="${item.id}"><div class="fill-row-title">${escapeHtml(item.title || 'Naamloos criterium')}</div>${item.levels.map((text,i) => `<button class="level-choice ${assessment.choices?.[item.id] === i ? 'selected' : ''}" data-level="${i}"><small>${i+1} · ${escapeHtml(state.levelNames[i])}</small>${escapeHtml(text || '—')}<b>${i*item.weight}</b></button>`).join('')}</article>`).join('');
+  const answered = valid.filter(item => Number.isInteger(assessment.choices?.[item.id])).length, max = maxPoints(valid), total = assessmentScore(valid);
+  $('#fillProgress').textContent = `${answered}/${valid.length}`; $('#fillTotal').textContent = `${total}/${max}`;
+  $('#fillGrade').textContent = answered === valid.length ? String(gradeFor(total,max)).replace('.',',') : '—';
+  saveAssessmentBook();
+}
+
+function addStudentAssessment() {
+  const next = blankAssessment(assessment.teacher || '');
+  next.rubricTitle = state.title;
+  assessmentBook.assessments.push(next); assessmentBook.activeId = next.id; assessment = next;
+  renderFill(); $('#studentName').focus();
+}
+
+function selectStudentAssessment(id) {
+  const selected = assessmentBook.assessments.find(item => item.id === id); if (!selected) return;
+  assessmentBook.activeId = id; assessment = selected; renderFill();
+}
+
+function stepStudentAssessment(direction) {
+  const index = assessmentBook.assessments.findIndex(item => item.id === assessment.id);
+  const next = assessmentBook.assessments[index + direction]; if (!next) return;
+  selectStudentAssessment(next.id);
+}
+
+function removeStudentAssessment(id) {
+  if (assessmentBook.assessments.length === 1) return;
+  const index = assessmentBook.assessments.findIndex(item => item.id === id); if (index < 0) return;
+  assessmentBook.assessments.splice(index,1);
+  assessment = assessmentBook.assessments[Math.min(index, assessmentBook.assessments.length - 1)];
+  assessmentBook.activeId = assessment.id; renderFill();
+}
+
+async function downloadAllAssessments() {
+  const valid = validCriteria(), completed = assessmentBook.assessments.filter(item => item.student.trim());
+  if (!completed.length) { showToast('Vul eerst minimaal één leerlingnaam in.'); return; }
+  const button = $('#downloadAllButton'), original = button.textContent;
+  button.disabled = true; button.textContent = 'Bestanden maken…';
+  try {
+    const folderName = safeName(state.title) || 'Rubric', zip = new JSZip(), folder = zip.folder(folderName);
+    completed.forEach((item,index) => {
+      const order = String(index + 1).padStart(2,'0');
+      folder.file(`${order} - ${safeName(item.student) || `Leerling ${index + 1}`}.pdf`, buildPdf(valid,maxPoints(valid),item).output('arraybuffer'));
+    });
+    folder.file(`${folderName} - beoordelingen.json`, JSON.stringify(assessmentExportData(), null, 2));
+    const blob = await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}});
+    const link = Object.assign(document.createElement('a'), {href:URL.createObjectURL(blob),download:`${folderName} - ingevulde rubrics.zip`});
+    link.click(); setTimeout(() => URL.revokeObjectURL(link.href),1000); showToast(`${completed.length} PDF’s en het klasbestand gedownload.`);
+  } catch (error) { console.error(error); showToast('De gezamenlijke download is niet gelukt.'); }
+  finally { button.disabled = false; button.textContent = original; }
+}
+
+function assessmentExportData() {
+  const valid = validCriteria(), max = maxPoints(valid);
+  return {
+    type:'rubricbouwer-beoordelingen',version:1,exportedAt:new Date().toISOString(),
+    rubric:{version:state.version,title:state.title,levelNames:state.levelNames,criteria:state.criteria},
+    assessments:assessmentBook.assessments.map(item => {
+      const answered = valid.filter(criterion => Number.isInteger(item.choices?.[criterion.id])).length;
+      const total = assessmentScore(valid,item), complete = valid.length > 0 && answered === valid.length;
+      return {id:item.id,student:item.student,teacher:item.teacher,choices:item.choices,answered,criteriaCount:valid.length,total,max,complete,grade:complete ? gradeFor(total,max) : null};
+    })
+  };
+}
+
+function downloadAssessmentsJson() {
+  const folderName = safeName(state.title) || 'Rubric';
+  const blob = new Blob([JSON.stringify(assessmentExportData(),null,2)],{type:'application/json'});
+  const link = Object.assign(document.createElement('a'),{href:URL.createObjectURL(blob),download:`${folderName} - beoordelingen.json`});
+  link.click(); setTimeout(() => URL.revokeObjectURL(link.href),1000); showToast('Beoordelingen geëxporteerd.');
+}
+
+async function gzipEncode(value) {
+  const stream = new Blob([value]).stream().pipeThrough(new CompressionStream('gzip'));
+  const bytes = new Uint8Array(await new Response(stream).arrayBuffer());
+  let binary = ''; for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+
+async function gzipDecode(value) {
+  const padded = value.replace(/-/g,'+').replace(/_/g,'/') + '='.repeat((4-value.length%4)%4);
+  const binary = atob(padded), bytes = Uint8Array.from(binary,c=>c.charCodeAt(0));
+  const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+  return new Response(stream).text();
+}
+
+async function makeShareLink(includeAssessment) {
+  try {
+    const sharedState = {version:state.version,title:state.title,levelNames:state.levelNames,criteria:state.criteria};
+    const payload = {v:1,r:sharedState,...(includeAssessment ? {a:assessment} : {})};
+    const encoded = await gzipEncode(JSON.stringify(payload));
+    const url = `${location.origin}${location.pathname}#rubric=v1.${encoded}`;
+    await navigator.clipboard.writeText(url);
+    showToast(`${includeAssessment ? 'Deellink voor leerling' : 'Deellink naar rubric'} gekopieerd (${url.length} tekens).`);
+  } catch (error) { console.error(error); showToast('Deellink maken is niet gelukt.'); }
+}
+
+async function loadSharedLink() {
+  const match = location.hash.match(/^#rubric=v1\.([A-Za-z0-9_-]+)$/); if (!match) return;
+  try {
+    const payload = JSON.parse(await gzipDecode(match[1]));
+    state = normalizeState(payload.r); sharedLinkMode = true; renderEditor();
+    if (payload.a) assessment = {...payload.a,choices:payload.a.choices || {}};
+    if (payload.a) openPreview(payload.a);
+    else {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      history.replaceState(null, '', `${location.pathname}${location.search}`);
+      showToast('Gedeelde rubric geopend in de editor.');
+    }
+  } catch (error) { console.error(error); showToast('Deze deellink kan niet worden gelezen.'); }
+}
 
 function slug(value) { return String(value).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,''); }
 function showToast(message) { const toast = $('#toast'); toast.textContent = message; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2400); }
 
 $('#importFile').addEventListener('change', async event => {
   const file = event.target.files[0]; if (!file) return;
-  try { state = normalizeState(JSON.parse(await file.text())); renderEditor(); scheduleSave(); showToast('Rubric geïmporteerd.'); }
+  try { state = normalizeState(JSON.parse(await file.text())); sharedLinkMode = false; renderEditor(); scheduleSave(); showToast('Rubric geïmporteerd.'); }
   catch { showToast('Dit bestand is geen geldige rubric.'); }
   event.target.value = '';
 });
 
 $('#newRubric').addEventListener('click', () => {
   if (!confirm('Een nieuwe rubric starten? De huidige versie blijft alleen behouden als je die eerst exporteert.')) return;
-  state = defaultState(); renderEditor(); scheduleSave();
+  state = defaultState(); sharedLinkMode = false; renderEditor(); scheduleSave();
 });
 $('#importButton').addEventListener('click', () => $('#importFile').click());
 $('#themeToggle').addEventListener('click', () => { state.theme = state.theme === 'dark' ? 'light' : 'dark'; applyTheme(); scheduleSave(); });
 $('#exportButton').addEventListener('click', exportSettings);
+$('#shareRubricButton').addEventListener('click', () => makeShareLink(false));
+$('#fillButton').addEventListener('click', openFill);
 $('#addCriterion').addEventListener('click', () => addCriterion());
 $('#addCriterionBottom').addEventListener('click', () => addCriterion());
-$('#previewButton').addEventListener('click', openPreview);
-$('#previewButtonBottom').addEventListener('click', openPreview);
+$('#previewButton').addEventListener('click', () => openPreview());
+$('#previewButtonBottom').addEventListener('click', () => openPreview());
 $('#backButton').addEventListener('click', closePreview);
-$('#downloadPackage').addEventListener('click', downloadPackage);
+$('#downloadPackage').addEventListener('click', () => sharedLinkMode ? downloadPreviewPdf() : downloadPackage());
+$('#closeFillButton').addEventListener('click', closeFill);
+$('#shareFilledButton').addEventListener('click', () => makeShareLink(true));
+$('#addStudentButton').addEventListener('click', addStudentAssessment);
+$('#removeStudentButton').addEventListener('click', () => removeStudentAssessment(assessment.id));
+$('#previousStudentButton').addEventListener('click', () => stepStudentAssessment(-1));
+$('#nextStudentButton').addEventListener('click', () => stepStudentAssessment(1));
+$('#studentSelect').addEventListener('change', event => selectStudentAssessment(event.target.value));
+$('#downloadJsonButton').addEventListener('click', downloadAssessmentsJson);
+$('#downloadAllButton').addEventListener('click', downloadAllAssessments);
+$('#filledPdfButton').addEventListener('click', () => {
+  const valid = validCriteria(); if (!assessment.student.trim()) { showToast('Vul eerst de voornaam van de leerling in.'); return; }
+  buildPdf(valid,maxPoints(valid),assessment).save(`${safeName(state.title)} - ${safeName(assessment.student)}.pdf`);
+});
+$('#studentName').addEventListener('input', event => { assessment.student=event.target.value; renderFill(); });
+$('#teacherName').addEventListener('input', event => { assessment.teacher=event.target.value; renderFill(); });
+$('#fillCriteria').addEventListener('click', event => {
+  const button=event.target.closest('.level-choice'), row=event.target.closest('.fill-row'); if(!button||!row)return;
+  assessment.choices[row.dataset.id]=Number(button.dataset.level); renderFill();
+});
 
 applyTheme();
 renderEditor();
+loadSharedLink();

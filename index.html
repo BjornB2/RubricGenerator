@@ -15,9 +15,11 @@
     <nav class="header-actions" aria-label="Bestandsacties">
       <button class="button button-ghost theme-toggle" id="themeToggle" aria-label="Wissel tussen lichte en donkere modus" title="Wissel thema">◐ <span>Donker</span></button>
       <button class="button button-ghost" id="newRubric">Nieuwe rubric</button>
-      <button class="button button-ghost" id="importButton">Importeren</button>
-      <button class="button button-ghost" id="exportButton">Exporteren</button>
+      <button class="button button-ghost" id="importButton">Rubric importeren</button>
+      <button class="button button-ghost" id="exportButton">Rubric exporteren</button>
       <input type="file" id="importFile" accept="application/json,.json" hidden>
+      <button class="button button-dark" id="shareRubricButton">Rubric delen</button>
+      <button class="button button-dark" id="fillButton">Online invullen</button>
       <button class="button button-accent" id="previewButton">PDF-preview</button>
     </nav>
   </header>
@@ -65,31 +67,31 @@
     <section class="summary-panel" aria-label="Samenvatting">
       <div><span>Criteria</span><strong id="criterionCount">0</strong></div>
       <div><span>Maximale score</span><strong id="maxScore">0</strong></div>
-      <button class="button button-accent" id="previewButtonBottom">Rubric bekijken</button>
+      <button class="button button-accent" id="previewButtonBottom">PDF-preview</button>
     </section>
   </main>
 
   <section id="preview" class="preview-screen" aria-hidden="true">
     <div class="preview-toolbar no-print">
-      <button class="button button-ghost" id="backButton">← Terug naar bewerken</button>
+      <button class="button button-ghost" id="backButton">← Terug naar editor</button>
       <div class="preview-note">Download de PDF en het importbestand samen in één rubricpakket.</div>
       <div class="preview-actions"><button class="button button-accent" id="downloadPackage">Rubricpakket downloaden</button></div>
     </div>
     <article class="rubric-page" id="rubricPage">
       <header class="print-header">
         <div><p>Beoordelingsrubric</p><h1 id="previewTitle"></h1></div>
-        <div class="header-grade"><strong>Eindcijfer</strong><span></span></div>
+        <div class="header-grade"><strong>Eindcijfer</strong><span id="previewGrade"></span></div>
       </header>
       <div class="identity-row">
-        <label>Naam leerling <span></span></label>
-        <label>Docent <span></span></label>
+        <label>Naam leerling <span><em id="previewStudent"></em></span></label>
+        <label>Docent <span><em id="previewTeacher"></em></span></label>
       </div>
       <div class="table-wrap">
         <table class="rubric-table">
           <thead><tr><th>Criterium</th><th id="previewLevel1">1 · Onvoldoende</th><th id="previewLevel2">2 · Voldoende</th><th id="previewLevel3">3 · Goed</th><th>Score</th></tr></thead>
           <tbody id="previewRows"></tbody>
         </table>
-        <div class="score-total"><strong>Totaalscore</strong><span></span><b>/ <i id="footerMax">0</i></b></div>
+        <div class="score-total"><strong>Totaalscore</strong><span><em id="previewTotal"></em></span><b>/ <i id="footerMax">0</i></b></div>
       </div>
       <footer class="print-footer">
         <div class="grade-scale" id="gradeScale"></div>
@@ -97,10 +99,39 @@
     </article>
   </section>
 
+  <section id="fillScreen" class="fill-screen no-print" aria-hidden="true">
+    <div class="fill-toolbar">
+      <button class="button button-ghost" id="closeFillButton">← Terug naar editor</button>
+      <div><strong id="fillProjectTitle"></strong><small>Online beoordeling</small></div>
+      <div class="fill-toolbar-actions"><button class="button button-ghost" id="shareFilledButton">Deellink voor leerling</button><button class="button button-accent" id="filledPdfButton">PDF downloaden</button></div>
+    </div>
+    <main class="fill-shell">
+      <nav class="student-tabbar" aria-label="Leerlingen">
+        <div class="student-switcher">
+          <button class="student-step" id="previousStudentButton" aria-label="Vorige leerling">←</button>
+          <label><span id="studentCounter">Leerling 1 van 1</span><select id="studentSelect" aria-label="Kies een leerling"></select></label>
+          <button class="student-step" id="nextStudentButton" aria-label="Volgende leerling">→</button>
+        </div>
+        <div class="student-actions">
+          <button class="button button-ghost" id="addStudentButton">+ Nieuwe leerling</button>
+          <button class="button button-ghost" id="removeStudentButton">Leerling verwijderen</button>
+          <button class="button button-ghost" id="downloadJsonButton">Beoordelingen exporteren</button>
+          <button class="button button-dark" id="downloadAllButton">Alle bestanden downloaden</button>
+        </div>
+      </nav>
+      <section class="fill-identity settings-panel">
+        <label class="field">Voornaam leerling<input id="studentName" type="text" maxlength="60" placeholder="Bijvoorbeeld: Sanne"></label>
+        <label class="field">Docent<input id="teacherName" type="text" maxlength="80" placeholder="Naam of afkorting"></label>
+        <div class="live-result"><span>Voortgang <b id="fillProgress">0/0</b></span><span>Totaal <b id="fillTotal">0/0</b></span><strong id="fillGrade">—</strong><small>Cijfer</small></div>
+      </section>
+      <div id="fillCriteria" class="fill-criteria"></div>
+    </main>
+  </section>
+
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script src="vendor/jspdf.umd.min.js"></script>
   <script src="vendor/jspdf.plugin.autotable.min.js"></script>
   <script src="vendor/jszip.min.js"></script>
-  <script src="app.js?v=5"></script>
+  <script src="app.js?v=local-1"></script>
 </body>
 </html>
