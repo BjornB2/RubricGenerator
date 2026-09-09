@@ -564,6 +564,17 @@ $('#removeStudentButton').addEventListener('click', () => removeStudentAssessmen
 $('#previousStudentButton').addEventListener('click', () => stepStudentAssessment(-1));
 $('#nextStudentButton').addEventListener('click', () => stepStudentAssessment(1));
 $('#studentSelect').addEventListener('change', event => selectStudentAssessment(event.target.value));
+$('#importAssessmentsButton').addEventListener('click', () => $('#assessmentImportFile').click());
+$('#assessmentImportFile').addEventListener('change', async event => {
+  const file = event.target.files[0]; if (!file) return;
+  try {
+    const payload = JSON.parse(await file.text());
+    if (payload?.type !== 'rubricbouwer-beoordelingen') throw new Error('Geen beoordelingenexport');
+    restoreAssessmentExport(payload); openFill();
+    showToast(`${assessmentBook.assessments.length} beoordelingen geïmporteerd.`);
+  } catch { showToast('Dit bestand is geen geldige beoordelingenexport.'); }
+  event.target.value = '';
+});
 $('#downloadJsonButton').addEventListener('click', downloadAssessmentsJson);
 $('#downloadAllButton').addEventListener('click', downloadAllAssessments);
 $('#filledPdfButton').addEventListener('click', () => {
