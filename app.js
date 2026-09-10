@@ -373,7 +373,7 @@ function openPreview(currentAssessment = null) {
   if (!state.title.trim()) { showToast('Vul eerst de naam van het project in.'); return; }
   if (!valid.length) { showToast('Vul eerst minimaal één criterium in.'); return; }
   $('#previewTitle').textContent = state.title.trim();
-  state.levelNames.forEach((name, i) => $(`#previewLevel${i + 1}`).textContent = `${i + 1} · ${name.trim() || `Niveau ${i + 1}`}`);
+  state.levelNames.forEach((name, i) => $(`#previewLevel${i + 1}`).textContent = name.trim() || `Niveau ${i + 1}`);
   $('#previewRows').innerHTML = valid.map(item => `<tr>
     <td>${escapeHtml(item.title.trim() || 'Naamloos criterium')}</td>
     ${item.levels.map(text => `<td>${escapeHtml(text.trim() || '—')}</td>`).join('')}
@@ -491,7 +491,7 @@ function buildPdf(valid, max, currentAssessment = null) {
   pdf.text('Naam leerling', 14, 35); pdf.line(41, 35, 142, 35);
   pdf.text('Docent', 154, 35); pdf.line(169, 35, 283, 35);
   if (currentAssessment) { pdf.setFont('helvetica','normal'); pdf.setTextColor(...navy); pdf.text(currentAssessment.student || '',43,34); pdf.text(currentAssessment.teacher || '',171,34); }
-  const headers = ['Criterium', ...state.levelNames.map((x, i) => `${i + 1} · ${x.trim() || `Niveau ${i + 1}`}`), 'Score'];
+  const headers = ['Criterium', ...state.levelNames.map((x, i) => x.trim() || `Niveau ${i + 1}`), 'Score'];
   const rows = valid.map(item => [item.title.trim() || 'Naamloos criterium', ...item.levels.map(x => x.trim() || '—'), '']);
   pdf.autoTable({
     startY: 40, head: [headers], body: rows, margin: {left:14,right:14,bottom:35},
@@ -603,7 +603,7 @@ function renderFill() {
   $('#className').value = assessmentBook.className || '';
   $('#studentName').value = assessment.student || '';
   $('#teacherName').value = assessment.teacher || '';
-  $('#fillCriteria').innerHTML = valid.map(item => `<article class="fill-row" data-id="${item.id}"><div class="fill-row-title">${escapeHtml(item.title || 'Naamloos criterium')}</div>${item.levels.map((text,i) => `<button class="level-choice ${assessment.choices?.[item.id] === i ? 'selected' : ''}" data-level="${i}"><small>${i+1} · ${escapeHtml(state.levelNames[i])}</small>${escapeHtml(text || '—')}<b>${i*item.weight}</b></button>`).join('')}</article>`).join('');
+  $('#fillCriteria').innerHTML = valid.map(item => `<article class="fill-row" data-id="${item.id}"><div class="fill-row-title">${escapeHtml(item.title || 'Naamloos criterium')}</div>${item.levels.map((text,i) => `<button class="level-choice ${assessment.choices?.[item.id] === i ? 'selected' : ''}" data-level="${i}"><small>${escapeHtml(state.levelNames[i].trim() || `Niveau ${i + 1}`)}</small>${escapeHtml(text || '—')}<b>${i*item.weight}</b></button>`).join('')}</article>`).join('');
   const answered = valid.filter(item => Number.isInteger(assessment.choices?.[item.id])).length, max = maxPoints(valid), total = assessmentScore(valid);
   $('#fillProgress').textContent = `${answered}/${valid.length}`; $('#fillTotal').textContent = `${total}/${max}`;
   $('#fillGrade').textContent = answered === valid.length ? String(gradeFor(total,max)).replace('.',',') : '—';
