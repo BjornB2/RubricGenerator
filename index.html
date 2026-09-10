@@ -13,7 +13,7 @@
   <meta name="twitter:title" content="Gedeelde rubric bekijken | Rubricbouwer">
   <meta name="twitter:description" content="Open deze gedeelde rubric om de criteria, beoordeling en het eindcijfer te bekijken.">
   <title>Rubricbouwer</title>
-  <link rel="stylesheet" href="styles.css?v=18">
+  <link rel="stylesheet" href="styles.css?v=20">
 </head>
 <body>
   <header class="app-header no-print">
@@ -134,7 +134,10 @@
       </section>
 
       <aside class="help-tip"><strong>Praktische tip</strong><p>Houd beschrijvingen kort en concreet. Zo blijft de rubric snel leesbaar en past een uitgebreide rubric beter op één liggend A4.</p></aside>
-      <footer class="site-footer"><a href="https://github.com/BjornB2/RubricGenerator" target="_blank" rel="noopener noreferrer">Bekijk Rubricbouwer op GitHub</a></footer>
+      <footer class="site-footer project-credit">
+        <p>Dit open-sourceproject is ontwikkeld vanuit de onderwijspraktijk door <strong>Björn Heirman</strong>, docent Onderzoek &amp; Ontwerpen (O&amp;O) aan het Coornhert Lyceum in Haarlem.</p>
+        <div><a href="mailto:bjorn@heirman.nl">bjorn@heirman.nl</a><span aria-hidden="true">·</span><a href="https://github.com/BjornB2/RubricGenerator" target="_blank" rel="noopener noreferrer">Bekijk het project op GitHub</a></div>
+      </footer>
     </main>
   </section>
 
@@ -236,10 +239,18 @@
     </div>
   </dialog>
 
+  <aside class="link-length-warning no-print" id="linkLengthWarning" role="status" aria-live="polite" hidden>
+    <strong>Houd de deellink compact</strong>
+    <p>Korte, concrete criteria en niveaus zorgen voor een beter leesbare rubric én een kortere deellink.</p>
+    <div>
+      <label><input type="checkbox" id="hideLinkLengthWarning"> Niet meer tonen</label>
+      <button class="button button-dark" type="button" id="dismissLinkLengthWarning">Begrepen</button>
+    </div>
+  </aside>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
   <script src="vendor/jspdf.umd.min.js"></script>
   <script src="vendor/jspdf.plugin.autotable.min.js"></script>
   <script src="vendor/jszip.min.js"></script>
-  <script src="app.js?v=16"></script>
+  <script src="app.js?v=17"></script>
 </body>
 </html>

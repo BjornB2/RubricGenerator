@@ -1,7 +1,7 @@
 const STORAGE_KEY = 'rubricbouwer.v1';
 const ASSESSMENT_KEY = 'rubricbouwer.assessment.v1';
 const ASSESSMENT_BOOK_KEY = 'rubricbouwer.assessments.v2';
-const LINK_LENGTH_WARNING_KEY = 'rubricbouwer.linkLengthWarning.v1';
+const LINK_LENGTH_WARNING_KEY = 'rubricbouwer.linkLengthWarning.v2';
 
 const blankCriterion = () => ({ id: crypto.randomUUID(), title: '', levels: ['', '', ''], weight: 1 });
 const defaultState = () => ({
@@ -20,6 +20,7 @@ let previewAssessment = null;
 let pendingAssessmentImport = null;
 let pendingImportReturnToFill = false;
 let helpReturnToFill = false;
+let linkLengthWarningShown = false;
 let saveTimer;
 const $ = (selector) => document.querySelector(selector);
 const list = $('#criteriaList');
@@ -723,9 +724,9 @@ async function loadSharedLink() {
 function slug(value) { return String(value).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,''); }
 function showToast(message, duration = 2400) { const toast = $('#toast'); toast.textContent = message; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), duration); }
 function showLinkLengthWarning() {
-  if (localStorage.getItem(LINK_LENGTH_WARNING_KEY)) return;
-  localStorage.setItem(LINK_LENGTH_WARNING_KEY, 'shown');
-  showToast('Tip: houd criteria en niveaus kort en concreet. Lange teksten zorgen voor langere deellinks.', 5000);
+  if (linkLengthWarningShown || localStorage.getItem(LINK_LENGTH_WARNING_KEY)) return;
+  linkLengthWarningShown = true;
+  $('#linkLengthWarning').hidden = false;
 }
 
 function startNewRubric() {
@@ -830,6 +831,10 @@ $('#mobileThemeToggle').addEventListener('click', () => { toggleTheme(); closeMo
 $('#mobileHelpButton').addEventListener('click', () => { closeMobileMenu(); openHelp(); });
 $('#mobileFillButton').addEventListener('click', openFill);
 $('#mobilePreviewButton').addEventListener('click', () => openPreview());
+$('#dismissLinkLengthWarning').addEventListener('click', () => {
+  if ($('#hideLinkLengthWarning').checked) localStorage.setItem(LINK_LENGTH_WARNING_KEY, 'hidden');
+  $('#linkLengthWarning').hidden = true;
+});
 
 document.addEventListener('keydown', event => {
   if (event.key === 'Escape' && !$('#mobileMenu').hidden) { closeMobileMenu(); $('#mobileMenuToggle').focus(); }
