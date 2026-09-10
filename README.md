@@ -72,7 +72,7 @@ Problemen en verbetervoorstellen kunnen via GitHub Issues worden gemeld. Houd bi
 
 ## Licentie
 
-Copyright © 2026 Bjorn Heirman.
+Copyright © 2026 Björn Heirman.
 
 Rubricbouwer is vrije software onder de **GNU Affero General Public License, versie 3 of later** (`AGPL-3.0-or-later`). Commercieel gebruik is toegestaan. Wie een aangepaste versie verspreidt of via een netwerk beschikbaar stelt, moet de bijbehorende broncode onder dezelfde licentie beschikbaar maken. Zie het bestand [`LICENSE`](LICENSE) voor de volledige voorwaarden.
 
