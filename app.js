@@ -1,6 +1,7 @@
 const STORAGE_KEY = 'rubricbouwer.v1';
 const ASSESSMENT_KEY = 'rubricbouwer.assessment.v1';
 const ASSESSMENT_BOOK_KEY = 'rubricbouwer.assessments.v2';
+const LINK_LENGTH_WARNING_KEY = 'rubricbouwer.linkLengthWarning.v1';
 
 const blankCriterion = () => ({ id: crypto.randomUUID(), title: '', levels: ['', '', ''], weight: 1 });
 const defaultState = () => ({
@@ -319,6 +320,10 @@ list.addEventListener('input', event => {
   const item = state.criteria.find(x => x.id === card.dataset.id);
   if (event.target.dataset.field === 'title') item.title = event.target.value;
   if (event.target.dataset.level !== undefined) item.levels[Number(event.target.dataset.level)] = event.target.value;
+  if ((event.target.dataset.field === 'title' && event.target.value.length >= 80) ||
+      (event.target.dataset.level !== undefined && event.target.value.length >= 240)) {
+    showLinkLengthWarning();
+  }
   if (event.target.dataset.field === 'weight') {
     item.weight = Number(event.target.value);
     card.querySelector('.weight-badge').textContent = `${item.weight}×`;
@@ -716,7 +721,12 @@ async function loadSharedLink() {
 }
 
 function slug(value) { return String(value).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,''); }
-function showToast(message) { const toast = $('#toast'); toast.textContent = message; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), 2400); }
+function showToast(message, duration = 2400) { const toast = $('#toast'); toast.textContent = message; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), duration); }
+function showLinkLengthWarning() {
+  if (localStorage.getItem(LINK_LENGTH_WARNING_KEY)) return;
+  localStorage.setItem(LINK_LENGTH_WARNING_KEY, 'shown');
+  showToast('Tip: houd criteria en niveaus kort en concreet. Lange teksten zorgen voor langere deellinks.', 5000);
+}
 
 function startNewRubric() {
   if (!confirm('Een nieuwe rubric starten? De huidige versie blijft alleen behouden als je die eerst opslaat.')) return;
