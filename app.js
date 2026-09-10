@@ -17,6 +17,8 @@ let assessment = activeAssessment();
 let sharedLinkMode = false;
 let previewAssessment = null;
 let pendingAssessmentImport = null;
+let pendingImportReturnToFill = false;
+let helpReturnToFill = false;
 let saveTimer;
 const $ = (selector) => document.querySelector(selector);
 const list = $('#criteriaList');
@@ -85,8 +87,46 @@ function importRubricOnly(payload) {
   resetAssessmentBook(); renderEditor(); applyTheme(); scheduleSave();
 }
 
+function restoreStudentList(payload) {
+  const source = payload?.type === 'rubricbouwer-leerlingen' ? payload.students : payload?.assessments;
+  if (!Array.isArray(source)) throw new Error('Ongeldige leerlinglijst');
+  const students = source.map(item => typeof item === 'string' ? item : item?.student)
+    .map(name => String(name ?? '').trim().slice(0,60)).filter(Boolean);
+  const restored = students.map(student => ({...blankAssessment(),rubricTitle:state.title,student}));
+  if (!restored.length) restored.push(blankAssessment());
+  restored.forEach(item => { item.rubricTitle = state.title; });
+  assessmentBook = {
+    rubricTitle:state.title,
+    className:String(payload?.className ?? '').slice(0,60),
+    activeId:restored[0].id,
+    assessments:restored
+  };
+  assessment = restored[0]; saveAssessmentBook();
+}
+
 function closeAssessmentImportDialog() {
-  pendingAssessmentImport = null; $('#assessmentImportDialog').close();
+  pendingAssessmentImport = null; pendingImportReturnToFill = false; $('#assessmentImportDialog').close();
+}
+
+function prepareImport(payload, returnToFill = false) {
+  const isFull = payload?.type === 'rubricbouwer-beoordelingen' && payload?.rubric && Array.isArray(payload.assessments);
+  const isStudentList = payload?.type === 'rubricbouwer-leerlingen' && Array.isArray(payload.students);
+  const hasRubric = isFull || (!isStudentList && payload && typeof payload === 'object');
+  const hasStudentList = isFull || isStudentList;
+  if (!hasRubric && !hasStudentList) throw new Error('Ongeldig bestand');
+  pendingAssessmentImport = payload; pendingImportReturnToFill = returnToFill;
+  $('#importRubricOnly').disabled = !hasRubric;
+  $('#importStudentListOnly').disabled = !hasStudentList;
+  $('#importRubricAndAssessments').disabled = !isFull;
+  if (isFull) {
+    const count = payload.assessments.length;
+    $('#assessmentImportSummary').textContent = `Dit bestand bevat een rubric, een leerlinglijst en ${count} beoordeling${count === 1 ? '' : 'en'}.`;
+  } else if (isStudentList) {
+    $('#assessmentImportSummary').textContent = `Dit bestand bevat een leerlinglijst met ${payload.students.length} leerling${payload.students.length === 1 ? '' : 'en'}.`;
+  } else {
+    $('#assessmentImportSummary').textContent = 'Dit bestand bevat alleen een rubric.';
+  }
+  $('#assessmentImportDialog').showModal();
 }
 
 function validCriteria() { return state.criteria.filter(item => item.title.trim() || item.levels.some(x => x.trim())); }
@@ -363,7 +403,10 @@ function closePreview() {
 }
 
 function openHelp() {
+  helpReturnToFill = $('#fillScreen').classList.contains('active');
+  $('#closeHelpButton').textContent = helpReturnToFill ? '← Terug naar invullen' : '← Terug naar editor';
   closeMobileMenu(); document.body.classList.add('mobile-actions-hidden');
+  if (helpReturnToFill) { $('#fillScreen').classList.remove('active'); $('#fillScreen').setAttribute('aria-hidden','true'); }
   $('#editor').style.display = 'none'; $('.app-header').style.display = 'none';
   $('#helpScreen').classList.add('active'); $('#helpScreen').setAttribute('aria-hidden','false');
   document.title = 'Uitleg – Rubricbouwer'; window.scrollTo(0,0);
@@ -371,15 +414,23 @@ function openHelp() {
 
 function closeHelp() {
   $('#helpScreen').classList.remove('active'); $('#helpScreen').setAttribute('aria-hidden','true');
-  $('#editor').style.display = ''; $('.app-header').style.display = '';
-  document.body.classList.remove('mobile-actions-hidden');
-  document.title = 'Rubricbouwer'; window.scrollTo(0,0);
+  if (helpReturnToFill) {
+    $('#fillScreen').classList.add('active'); $('#fillScreen').setAttribute('aria-hidden','false');
+    document.title = `${state.title || 'Rubric'} – Online beoordelen`;
+  } else {
+    $('#editor').style.display = ''; $('.app-header').style.display = '';
+    document.body.classList.remove('mobile-actions-hidden'); document.title = 'Rubricbouwer';
+  }
+  helpReturnToFill = false; window.scrollTo(0,0);
 }
 
 function applyTheme() {
   document.documentElement.dataset.theme = state.theme;
-  $('#themeToggle span').textContent = state.theme === 'dark' ? 'Licht' : 'Donker';
-  $('#themeToggle').setAttribute('aria-pressed', state.theme === 'dark');
+  const themeAction = state.theme === 'dark' ? 'Lichte modus inschakelen' : 'Donkere modus inschakelen';
+  [$('#themeToggle'),$('#fillThemeToggle')].forEach(button => {
+    button.setAttribute('aria-label',themeAction); button.title = themeAction;
+    button.setAttribute('aria-pressed', state.theme === 'dark');
+  });
   $('#mobileThemeToggle span').textContent = state.theme === 'dark' ? 'Licht thema' : 'Donker thema';
   $('#mobileThemeToggle').setAttribute('aria-pressed', state.theme === 'dark');
 }
@@ -389,6 +440,23 @@ function exportSettings() {
   const blob = new Blob([data], {type:'application/json'});
   const link = Object.assign(document.createElement('a'), {href: URL.createObjectURL(blob), download: `${slug(state.title) || 'rubric'}.rubric.json`});
   link.click(); URL.revokeObjectURL(link.href); showToast('Rubric opgeslagen.');
+}
+
+function studentListExportData() {
+  return {
+    type:'rubricbouwer-leerlingen',version:1,exportedAt:new Date().toISOString(),
+    className:assessmentBook.className || '',
+    students:assessmentBook.assessments.map(item => item.student.trim()).filter(Boolean)
+  };
+}
+
+function downloadStudentList() {
+  const data = studentListExportData();
+  if (!data.students.length) { showToast('Vul eerst minimaal één leerlingnaam in.'); return; }
+  const className = safeName(data.className) || 'Klas';
+  const blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const link = Object.assign(document.createElement('a'),{href:URL.createObjectURL(blob),download:`Leerlinglijst ${className}.json`});
+  link.click(); setTimeout(() => URL.revokeObjectURL(link.href),1000); showToast('Leerlinglijst opgeslagen.');
 }
 
 function openRubricExportDialog() {
@@ -568,8 +636,8 @@ async function downloadAllAssessments() {
   const completed = named.filter(item => isAssessmentComplete(item,valid));
   const skipped = named.length - completed.length;
   if (!completed.length) { showToast('Rond eerst minimaal één beoordeling volledig af.'); return; }
-  const button = $('#downloadAllButton'), original = button.textContent;
-  button.disabled = true; button.textContent = 'Bestanden maken…';
+  const button = $('#downloadAllButton');
+  button.disabled = true; button.setAttribute('aria-busy','true');
   try {
     const folderName = assessmentFileBase(), zip = new JSZip(), folder = zip.folder(folderName);
     completed.forEach((item,index) => {
@@ -582,7 +650,7 @@ async function downloadAllAssessments() {
     link.click(); setTimeout(() => URL.revokeObjectURL(link.href),1000);
     showToast(`${completed.length} PDF’s en het klasbestand gedownload${skipped ? `; ${skipped} onvolledige beoordeling${skipped === 1 ? '' : 'en'} overgeslagen` : ''}.`);
   } catch (error) { console.error(error); showToast('De gezamenlijke download is niet gelukt.'); }
-  finally { button.disabled = false; button.textContent = original; }
+  finally { button.disabled = false; button.removeAttribute('aria-busy'); }
 }
 
 function assessmentExportData() {
@@ -677,30 +745,35 @@ $('#importFile').addEventListener('change', async event => {
   const file = event.target.files[0]; if (!file) return;
   try {
     const payload = JSON.parse(await file.text());
-    if (payload?.type === 'rubricbouwer-beoordelingen') {
-      pendingAssessmentImport = payload;
-      const count = Array.isArray(payload.assessments) ? payload.assessments.length : 0;
-      $('#assessmentImportCount').textContent = `${count} beoordeling${count === 1 ? '' : 'en'}`;
-      $('#assessmentImportDialog').showModal();
-    } else {
-      importRubricOnly(payload); showToast('Rubric geopend.');
-    }
+    prepareImport(payload, $('#fillScreen').classList.contains('active'));
   }
-  catch { showToast('Dit bestand is geen geldige rubric en geen geldig klasbestand.'); }
+  catch { showToast('Dit bestand is geen geldige rubric, leerlinglijst of klasbestand.'); }
   event.target.value = '';
 });
 
 $('#newRubric').addEventListener('click', startNewRubric);
 $('#importButton').addEventListener('click', () => $('#importFile').click());
 $('#cancelAssessmentImport').addEventListener('click', closeAssessmentImportDialog);
-$('#assessmentImportDialog').addEventListener('cancel', () => { pendingAssessmentImport = null; });
+$('#assessmentImportDialog').addEventListener('cancel', () => { pendingAssessmentImport = null; pendingImportReturnToFill = false; });
 $('#importRubricOnly').addEventListener('click', () => {
   if (!pendingAssessmentImport) return;
-  importRubricOnly(pendingAssessmentImport); closeAssessmentImportDialog(); showToast('Alleen de rubric is geopend.');
+  const payload = pendingAssessmentImport, returnToFill = pendingImportReturnToFill;
+  importRubricOnly(payload); closeAssessmentImportDialog();
+  if (returnToFill) { $('#fillProjectTitle').textContent = state.title; renderFill(); }
+  showToast('Alleen de rubric is geopend.');
+});
+$('#importStudentListOnly').addEventListener('click', () => {
+  if (!pendingAssessmentImport) return;
+  const payload = pendingAssessmentImport, returnToFill = pendingImportReturnToFill;
+  restoreStudentList(payload); closeAssessmentImportDialog();
+  if (returnToFill) renderFill();
+  showToast(`${assessmentBook.assessments.filter(item => item.student).length} leerlingen geopend.`);
 });
 $('#importRubricAndAssessments').addEventListener('click', () => {
   if (!pendingAssessmentImport) return;
-  const payload = pendingAssessmentImport; restoreAssessmentExport(payload); closeAssessmentImportDialog();
+  const payload = pendingAssessmentImport, returnToFill = pendingImportReturnToFill;
+  restoreAssessmentExport(payload); closeAssessmentImportDialog();
+  if (returnToFill) { $('#fillProjectTitle').textContent = state.title; renderFill(); }
   showToast(`${assessmentBook.assessments.length} beoordelingen geopend.`);
 });
 $('#helpButton').addEventListener('click', openHelp);
@@ -710,6 +783,7 @@ $('#exportButton').addEventListener('click', openRubricExportDialog);
 $('#cancelRubricExport').addEventListener('click', closeRubricExportDialog);
 $('#rubricExportDialog').addEventListener('cancel', closeRubricExportDialog);
 $('#exportRubricOnly').addEventListener('click', () => { closeRubricExportDialog(); exportSettings(); });
+$('#exportStudentListOnly').addEventListener('click', () => { closeRubricExportDialog(); downloadStudentList(); });
 $('#exportRubricAndAssessments').addEventListener('click', () => { closeRubricExportDialog(); downloadAssessmentsJson(); });
 $('#shareRubricButton').addEventListener('click', () => makeShareLink(false));
 $('#fillButton').addEventListener('click', openFill);
@@ -718,24 +792,16 @@ $('#previewButton').addEventListener('click', () => openPreview());
 $('#backButton').addEventListener('click', closePreview);
 $('#downloadPackage').addEventListener('click', () => sharedLinkMode ? downloadPreviewPdf() : downloadPackage());
 $('#closeFillButton').addEventListener('click', closeFill);
+$('#fillHelpButton').addEventListener('click', openHelp);
+$('#fillThemeToggle').addEventListener('click', toggleTheme);
+$('#fillImportButton').addEventListener('click', () => $('#importFile').click());
+$('#fillExportButton').addEventListener('click', openRubricExportDialog);
 $('#shareFilledButton').addEventListener('click', () => makeShareLink(true));
 $('#addStudentButton').addEventListener('click', addStudentAssessment);
 $('#removeStudentButton').addEventListener('click', () => removeStudentAssessment(assessment.id));
 $('#previousStudentButton').addEventListener('click', () => stepStudentAssessment(-1));
 $('#nextStudentButton').addEventListener('click', () => stepStudentAssessment(1));
 $('#studentSelect').addEventListener('change', event => selectStudentAssessment(event.target.value));
-$('#importAssessmentsButton').addEventListener('click', () => $('#assessmentImportFile').click());
-$('#assessmentImportFile').addEventListener('change', async event => {
-  const file = event.target.files[0]; if (!file) return;
-  try {
-    const payload = JSON.parse(await file.text());
-    if (payload?.type !== 'rubricbouwer-beoordelingen') throw new Error('Geen beoordelingenexport');
-    restoreAssessmentExport(payload); openFill();
-    showToast(`${assessmentBook.assessments.length} beoordelingen geopend.`);
-  } catch { showToast('Dit bestand is geen geldig klasbestand.'); }
-  event.target.value = '';
-});
-$('#downloadJsonButton').addEventListener('click', downloadAssessmentsJson);
 $('#downloadAllButton').addEventListener('click', downloadAllAssessments);
 $('#filledPdfButton').addEventListener('click', () => {
   const valid = validCriteria(); if (!assessment.student.trim()) { showToast('Vul eerst de voornaam van de leerling in.'); return; }
