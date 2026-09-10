@@ -2,7 +2,7 @@
 
 Rubricbouwer is een Nederlandstalige webtool voor het ontwerpen van rubrics, online beoordelen van leerlingen en maken van printklare PDF’s. De toepassing werkt volledig in de browser en heeft geen account, database of serveropslag nodig.
 
-**Live versie:** [bjornb2.github.io/RubricGenerator](https://bjornb2.github.io/RubricGenerator/)
+**Live versie:** [onlinerubric.nl](https://onlinerubric.nl/)
 
 ## Mogelijkheden
 
