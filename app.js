@@ -405,7 +405,7 @@ function closePreview() {
   $('#preview').classList.remove('active'); $('#preview').setAttribute('aria-hidden','true');
   $('#editor').style.display = ''; $('.app-header').style.display = '';
   document.body.classList.remove('mobile-actions-hidden');
-  document.title = 'Rubricbouwer';
+  document.title = 'OnlineRubric';
 }
 
 function openHelp() {
@@ -415,7 +415,7 @@ function openHelp() {
   if (helpReturnToFill) { $('#fillScreen').classList.remove('active'); $('#fillScreen').setAttribute('aria-hidden','true'); }
   $('#editor').style.display = 'none'; $('.app-header').style.display = 'none';
   $('#helpScreen').classList.add('active'); $('#helpScreen').setAttribute('aria-hidden','false');
-  document.title = 'Uitleg – Rubricbouwer'; window.scrollTo(0,0);
+  document.title = 'Uitleg – OnlineRubric'; window.scrollTo(0,0);
 }
 
 function closeHelp() {
@@ -425,7 +425,7 @@ function closeHelp() {
     document.title = `${state.title || 'Rubric'} – Online beoordelen`;
   } else {
     $('#editor').style.display = ''; $('.app-header').style.display = '';
-    document.body.classList.remove('mobile-actions-hidden'); document.title = 'Rubricbouwer';
+    document.body.classList.remove('mobile-actions-hidden'); document.title = 'OnlineRubric';
   }
   helpReturnToFill = false; window.scrollTo(0,0);
 }
@@ -530,7 +530,7 @@ function buildPdf(valid, max, currentAssessment = null) {
     pdf.setTextColor(255); pdf.setFont('helvetica','bold'); pdf.setFontSize(4.5); pdf.text(band.range,x+cellW/2,top+4,{align:'center'});
     pdf.setTextColor(...navy); pdf.setFontSize(5.5); pdf.text(band.grade,x+cellW/2,top+10,{align:'center'});
   });
-  pdf.setProperties({title: state.title || 'Rubric', subject:'Printbare beoordelingsrubric', creator:'Rubricbouwer'});
+  pdf.setProperties({title: state.title || 'Rubric', subject:'Printbare beoordelingsrubric', creator:'OnlineRubric'});
   return pdf;
 }
 
@@ -586,7 +586,7 @@ function openFill() {
 
 function closeFill() {
   $('#fillScreen').classList.remove('active'); $('#fillScreen').setAttribute('aria-hidden','true');
-  $('#editor').style.display = ''; $('.app-header').style.display = ''; document.body.classList.remove('mobile-actions-hidden'); document.title = 'Rubricbouwer';
+  $('#editor').style.display = ''; $('.app-header').style.display = ''; document.body.classList.remove('mobile-actions-hidden'); document.title = 'OnlineRubric';
 }
 
 function renderFill() {

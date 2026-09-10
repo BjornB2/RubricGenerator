@@ -1,6 +1,6 @@
-# Rubricbouwer
+# OnlineRubric
 
-Rubricbouwer is een Nederlandstalige webtool voor het ontwerpen van rubrics, online beoordelen van leerlingen en maken van printklare PDF’s. De toepassing werkt volledig in de browser en heeft geen account, database of serveropslag nodig.
+OnlineRubric is een Nederlandstalige webtool voor het ontwerpen van rubrics, online beoordelen van leerlingen en maken van printklare PDF’s. De toepassing werkt volledig in de browser en heeft geen account, database of serveropslag nodig.
 
 **Live versie:** [onlinerubric.nl](https://onlinerubric.nl/)
 
@@ -74,6 +74,6 @@ Problemen en verbetervoorstellen kunnen via GitHub Issues worden gemeld. Houd bi
 
 Copyright © 2026 Björn Heirman.
 
-Rubricbouwer is vrije software onder de **GNU Affero General Public License, versie 3 of later** (`AGPL-3.0-or-later`). Commercieel gebruik is toegestaan. Wie een aangepaste versie verspreidt of via een netwerk beschikbaar stelt, moet de bijbehorende broncode onder dezelfde licentie beschikbaar maken. Zie het bestand [`LICENSE`](LICENSE) voor de volledige voorwaarden.
+OnlineRubric is vrije software onder de **GNU Affero General Public License, versie 3 of later** (`AGPL-3.0-or-later`). Commercieel gebruik is toegestaan. Wie een aangepaste versie verspreidt of via een netwerk beschikbaar stelt, moet de bijbehorende broncode onder dezelfde licentie beschikbaar maken. Zie het bestand [`LICENSE`](LICENSE) voor de volledige voorwaarden.
 
 De afzonderlijke bibliotheken in `vendor/` blijven onder hun eigen licentievoorwaarden vallen.

@@ -4,21 +4,28 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#123d55">
-  <meta name="description" content="Bekijk een gedeelde beoordelingsrubric of maak zelf een duidelijke rubric.">
+  <meta name="description" content="Ontwerp rubrics, beoordeel leerlingen online en download printklare PDF’s met OnlineRubric.">
+  <link rel="canonical" href="https://onlinerubric.nl/">
   <meta property="og:type" content="website">
-  <meta property="og:title" content="Gedeelde rubric bekijken | Rubricbouwer">
-  <meta property="og:description" content="Open deze gedeelde rubric om de criteria, beoordeling en het eindcijfer te bekijken.">
-  <meta property="og:site_name" content="Rubricbouwer">
-  <meta name="twitter:card" content="summary">
-  <meta name="twitter:title" content="Gedeelde rubric bekijken | Rubricbouwer">
-  <meta name="twitter:description" content="Open deze gedeelde rubric om de criteria, beoordeling en het eindcijfer te bekijken.">
-  <title>Rubricbouwer</title>
+  <meta property="og:url" content="https://onlinerubric.nl/">
+  <meta property="og:title" content="OnlineRubric | Rubrics ontwerpen, beoordelen en delen">
+  <meta property="og:description" content="Ontwerp duidelijke rubrics, beoordeel leerlingen online en download printklare PDF’s — volledig in je eigen browser.">
+  <meta property="og:site_name" content="OnlineRubric">
+  <meta property="og:image" content="https://onlinerubric.nl/og.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="OnlineRubric — Rubrics ontwerpen, beoordelen en delen">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="OnlineRubric | Rubrics ontwerpen, beoordelen en delen">
+  <meta name="twitter:description" content="Ontwerp duidelijke rubrics, beoordeel leerlingen online en download printklare PDF’s — volledig in je eigen browser.">
+  <meta name="twitter:image" content="https://onlinerubric.nl/og.png">
+  <title>OnlineRubric</title>
   <link rel="stylesheet" href="styles.css?v=21">
 </head>
 <body>
   <header class="app-header no-print">
-    <a class="brand" href="#editor" aria-label="Rubricbouwer start">
-      <span><strong>Rubricbouwer</strong><small>ontwerpen, beoordelen en delen</small></span>
+    <a class="brand" href="#editor" aria-label="OnlineRubric start">
+      <span><strong>OnlineRubric</strong><small>ontwerpen, beoordelen en delen</small></span>
     </a>
     <button class="mobile-menu-toggle" id="mobileMenuToggle" type="button" aria-label="Menu openen" aria-controls="mobileMenu" aria-expanded="false"><span></span><span></span><span></span></button>
     <nav class="header-actions" aria-label="Bestandsacties">
@@ -101,19 +108,19 @@
       <div><span>Criteria</span><strong id="criterionCount">0</strong></div>
       <div><span>Maximale score</span><strong id="maxScore">0</strong></div>
     </section>
-    <footer class="site-footer"><a href="https://github.com/BjornB2/RubricGenerator" target="_blank" rel="noopener noreferrer">Bekijk Rubricbouwer op GitHub</a></footer>
+    <footer class="site-footer"><a href="https://github.com/BjornB2/RubricGenerator" target="_blank" rel="noopener noreferrer">Bekijk OnlineRubric op GitHub</a></footer>
   </main>
 
   <section id="helpScreen" class="help-screen no-print" aria-hidden="true">
     <header class="help-toolbar">
       <button class="button button-ghost" id="closeHelpButton">← Terug naar editor</button>
-      <strong>Uitleg Rubricbouwer</strong>
+      <strong>Uitleg OnlineRubric</strong>
       <span></span>
     </header>
     <main class="help-shell">
       <section class="help-intro">
         <p class="eyebrow">Van ontwerp tot beoordeling</p>
-        <h1>Zo werkt de Rubricbouwer</h1>
+        <h1>Zo werkt OnlineRubric</h1>
         <p>Maak een rubric, print hem uit of beoordeel leerlingen direct online. Alles gebeurt in je eigen browser; er is geen account of database nodig.</p>
       </section>
 
@@ -214,7 +221,7 @@
         <div class="live-result"><span>Voortgang <b id="fillProgress">0/0</b></span><span>Totaal <b id="fillTotal">0/0</b></span><strong id="fillGrade">—</strong><small>Cijfer</small></div>
       </section>
       <div id="fillCriteria" class="fill-criteria"></div>
-      <footer class="site-footer"><a href="https://github.com/BjornB2/RubricGenerator" target="_blank" rel="noopener noreferrer">Bekijk Rubricbouwer op GitHub</a></footer>
+      <footer class="site-footer"><a href="https://github.com/BjornB2/RubricGenerator" target="_blank" rel="noopener noreferrer">Bekijk OnlineRubric op GitHub</a></footer>
     </main>
   </section>
 
@@ -258,6 +265,6 @@
   <script src="vendor/jspdf.umd.min.js"></script>
   <script src="vendor/jspdf.plugin.autotable.min.js"></script>
   <script src="vendor/jszip.min.js"></script>
-  <script src="app.js?v=17"></script>
+  <script src="app.js?v=18"></script>
 </body>
 </html>
