@@ -610,6 +610,39 @@ function renderFill() {
   saveAssessmentBook();
 }
 
+function openSharedAssessment(currentAssessment) {
+  const valid = validCriteria();
+  previewAssessment = currentAssessment;
+  document.documentElement.dataset.theme = 'light';
+  document.body.classList.add('mobile-actions-hidden');
+  $('#editor').style.display = 'none';
+  $('.app-header').style.display = 'none';
+  $('#preview').classList.remove('active');
+  $('#fillScreen').classList.remove('active');
+  $('#sharedProjectTitle').textContent = state.title;
+  $('#sharedStudentName').textContent = currentAssessment.student || '—';
+  $('#sharedTeacherName').textContent = currentAssessment.teacher || '—';
+  $('#sharedCriteria').innerHTML = valid.map(item => `<article class="fill-row" data-id="${item.id}">
+    <div class="fill-row-title">${escapeHtml(item.title || 'Naamloos criterium')}</div>
+    ${item.levels.map((text, i) => {
+      const selected = currentAssessment.choices?.[item.id] === i;
+      const levelName = state.levelNames[i].trim() || `Niveau ${i + 1}`;
+      const points = i * item.weight;
+      const label = `${levelName}: ${text || '—'}; ${points} ${points === 1 ? 'punt' : 'punten'}${selected ? '; geselecteerd' : ''}`;
+      return `<div class="level-choice ${selected ? 'selected' : ''}" role="group" aria-label="${escapeHtml(label)}">
+        <small>${escapeHtml(levelName)}</small>${escapeHtml(text || '—')}<b>${points}</b>
+      </div>`;
+    }).join('')}
+  </article>`).join('');
+  const max = maxPoints(valid), total = assessmentScore(valid, currentAssessment);
+  $('#sharedTotal').textContent = `${total}/${max}`;
+  $('#sharedGrade').textContent = isAssessmentComplete(currentAssessment, valid) ? gradeFor(total, max).toFixed(1).replace('.', ',') : '—';
+  $('#sharedAssessmentScreen').classList.add('active');
+  $('#sharedAssessmentScreen').setAttribute('aria-hidden', 'false');
+  document.title = `${state.title || 'Rubric'} – Gedeelde beoordeling`;
+  window.scrollTo(0, 0);
+}
+
 function addStudentAssessment() {
   const next = blankAssessment(assessment.teacher || '');
   next.rubricTitle = state.title;
@@ -712,7 +745,7 @@ async function loadSharedLink() {
     const payload = JSON.parse(await gzipDecode(match[1]));
     state = normalizeState(payload.r); sharedLinkMode = true; renderEditor();
     if (payload.a) assessment = {...payload.a,choices:payload.a.choices || {}};
-    if (payload.a) openPreview(payload.a);
+    if (payload.a) openSharedAssessment(assessment);
     else {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
       history.replaceState(null, '', `${location.pathname}${location.search}`);
@@ -819,6 +852,7 @@ $('#filledPdfButton').addEventListener('click', () => {
   if (!isAssessmentComplete(assessment,valid)) { showToast('Vul eerst alle criteria voor deze leerling in.'); return; }
   buildPdf(valid,maxPoints(valid),assessment).save(`${assessmentFileBase()} - ${safeName(assessment.student)}.pdf`);
 });
+$('#sharedPdfButton').addEventListener('click', downloadPreviewPdf);
 
 $('#mobileMenuToggle').addEventListener('click', openMobileMenu);
 $('#mobileMenuClose').addEventListener('click', closeMobileMenu);
