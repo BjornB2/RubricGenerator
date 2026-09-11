@@ -2,16 +2,17 @@ const STORAGE_KEY = 'rubricbouwer.v1';
 const ASSESSMENT_KEY = 'rubricbouwer.assessment.v1';
 const ASSESSMENT_BOOK_KEY = 'rubricbouwer.assessments.v2';
 const LINK_LENGTH_WARNING_KEY = 'rubricbouwer.linkLengthWarning.v2';
+const THEME_KEY = 'rubricbouwer.theme.v1';
 
 const blankCriterion = () => ({ id: crypto.randomUUID(), title: '', levels: ['', '', ''], weight: 1 });
 const defaultState = () => ({
   version: 3,
-  theme: window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light',
   title: '',
   levelNames: ['Onvoldoende', 'Voldoende', 'Goed'],
   criteria: [blankCriterion()]
 });
 
+let theme = loadTheme();
 let state = loadState();
 let assessmentBook = loadAssessmentBook();
 let assessment = activeAssessment();
@@ -30,6 +31,19 @@ function loadState() {
     const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY));
     return normalizeState(parsed);
   } catch { return defaultState(); }
+}
+
+function loadTheme() {
+  try {
+    const savedTheme = localStorage.getItem(THEME_KEY);
+    if (savedTheme === 'dark' || savedTheme === 'light') return savedTheme;
+    const legacyTheme = JSON.parse(localStorage.getItem(STORAGE_KEY))?.theme;
+    if (legacyTheme === 'dark' || legacyTheme === 'light') {
+      localStorage.setItem(THEME_KEY, legacyTheme);
+      return legacyTheme;
+    }
+  } catch {}
+  return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
 
 function blankAssessment(teacher = '') {
@@ -156,7 +170,7 @@ function normalizeState(input) {
   if (inputVersion < 2 && names[0] === 'Nog oefenen') names[0] = 'Onvoldoende';
   let title = String(input.title ?? '').slice(0, 120);
   if (inputVersion < 3) title = title.replace(/^Beoordelingsrubric\s+/i, '');
-  return { version: 3, theme: input.theme === 'dark' ? 'dark' : 'light', title, levelNames: names.map(x => String(x).slice(0, 40)), criteria: criteria.length ? criteria : [blankCriterion()] };
+  return { version: 3, title, levelNames: names.map(x => String(x).slice(0, 40)), criteria: criteria.length ? criteria : [blankCriterion()] };
 }
 
 function escapeHtml(value) {
@@ -431,14 +445,14 @@ function closeHelp() {
 }
 
 function applyTheme() {
-  document.documentElement.dataset.theme = state.theme;
-  const themeAction = state.theme === 'dark' ? 'Lichte modus inschakelen' : 'Donkere modus inschakelen';
+  document.documentElement.dataset.theme = theme;
+  const themeAction = theme === 'dark' ? 'Lichte modus inschakelen' : 'Donkere modus inschakelen';
   [$('#themeToggle'),$('#fillThemeToggle')].forEach(button => {
     button.setAttribute('aria-label',themeAction); button.title = themeAction;
-    button.setAttribute('aria-pressed', state.theme === 'dark');
+    button.setAttribute('aria-pressed', theme === 'dark');
   });
-  $('#mobileThemeToggle span').textContent = state.theme === 'dark' ? 'Licht thema' : 'Donker thema';
-  $('#mobileThemeToggle').setAttribute('aria-pressed', state.theme === 'dark');
+  $('#mobileThemeToggle span').textContent = theme === 'dark' ? 'Licht thema' : 'Donker thema';
+  $('#mobileThemeToggle').setAttribute('aria-pressed', theme === 'dark');
 }
 
 function exportSettings() {
@@ -782,7 +796,9 @@ function closeMobileMenu() {
 }
 
 function toggleTheme() {
-  state.theme = state.theme === 'dark' ? 'light' : 'dark'; applyTheme(); scheduleSave();
+  theme = theme === 'dark' ? 'light' : 'dark';
+  localStorage.setItem(THEME_KEY, theme);
+  applyTheme();
 }
 
 $('#importFile').addEventListener('change', async event => {
