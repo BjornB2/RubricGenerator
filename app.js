@@ -384,7 +384,7 @@ function openPreview(currentAssessment = null) {
   $('#previewStudent').textContent = currentAssessment?.student || '';
   $('#previewTeacher').textContent = currentAssessment?.teacher || '';
   $('#previewTotal').textContent = total;
-  $('#previewGrade').textContent = isAssessmentComplete(currentAssessment,valid) ? String(gradeFor(total,max)).replace('.',',') : '';
+  $('#previewGrade').textContent = isAssessmentComplete(currentAssessment,valid) ? gradeFor(total,max).toFixed(1).replace('.',',') : '';
   previewAssessment = currentAssessment;
   const readOnlySharedAssessment = sharedLinkMode && Boolean(currentAssessment);
   $('#backButton').hidden = readOnlySharedAssessment;
@@ -486,7 +486,7 @@ function buildPdf(valid, max, currentAssessment = null) {
   pdf.setDrawColor(...orange); pdf.setLineWidth(.45); pdf.line(14, 26, 283, 26);
   pdf.setFontSize(7.5); pdf.text('Eindcijfer', 241, 14);
   pdf.setDrawColor(...orange); pdf.setLineWidth(.5); pdf.roundedRect(259, 8, 24, 12, 1.4, 1.4);
-  if (isAssessmentComplete(currentAssessment,valid)) { pdf.setTextColor(...navy); pdf.setFont('helvetica','bold'); pdf.setFontSize(12); pdf.text(String(gradeFor(assessmentScore(valid,currentAssessment),max)).replace('.',','),271,15.7,{align:'center'}); }
+  if (isAssessmentComplete(currentAssessment,valid)) { pdf.setTextColor(...navy); pdf.setFont('helvetica','bold'); pdf.setFontSize(12); pdf.text(gradeFor(assessmentScore(valid,currentAssessment),max).toFixed(1).replace('.',','),271,15.7,{align:'center'}); }
   pdf.setDrawColor(82,101,109); pdf.setLineWidth(.25);
   pdf.text('Naam leerling', 14, 35); pdf.line(41, 35, 142, 35);
   pdf.text('Docent', 154, 35); pdf.line(169, 35, 283, 35);
