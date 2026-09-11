@@ -606,7 +606,7 @@ function renderFill() {
   $('#fillCriteria').innerHTML = valid.map(item => `<article class="fill-row" data-id="${item.id}"><div class="fill-row-title">${escapeHtml(item.title || 'Naamloos criterium')}</div>${item.levels.map((text,i) => `<button class="level-choice ${assessment.choices?.[item.id] === i ? 'selected' : ''}" data-level="${i}"><small>${escapeHtml(state.levelNames[i].trim() || `Niveau ${i + 1}`)}</small>${escapeHtml(text || '—')}<b>${i*item.weight}</b></button>`).join('')}</article>`).join('');
   const answered = valid.filter(item => Number.isInteger(assessment.choices?.[item.id])).length, max = maxPoints(valid), total = assessmentScore(valid);
   $('#fillProgress').textContent = `${answered}/${valid.length}`; $('#fillTotal').textContent = `${total}/${max}`;
-  $('#fillGrade').textContent = answered === valid.length ? String(gradeFor(total,max)).replace('.',',') : '—';
+  $('#fillGrade').textContent = answered === valid.length ? gradeFor(total,max).toFixed(1).replace('.',',') : '—';
   saveAssessmentBook();
 }
 
