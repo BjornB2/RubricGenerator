@@ -376,7 +376,7 @@ function gradeBands(max) {
   return Array.from({length: 19}, (_, i) => {
     const grade = 1 + i * .5;
     const values = Array.from({length: max + 1}, (_, score) => score).filter(score => gradeFor(score, max) === grade);
-    if (!values.length) return { grade: String(grade).replace('.', ','), range: '—' };
+    if (!values.length) return { grade: String(grade).replace('.', ','), range: '-' };
     const first = values[0], last = values.at(-1);
     return { grade: String(grade).replace('.', ','), range: first === last ? `${first}` : `${first}–${last}` };
   });
@@ -390,7 +390,7 @@ function openPreview(currentAssessment = null) {
   state.levelNames.forEach((name, i) => $(`#previewLevel${i + 1}`).textContent = name.trim() || `Niveau ${i + 1}`);
   $('#previewRows').innerHTML = valid.map(item => `<tr>
     <td>${escapeHtml(item.title.trim() || 'Naamloos criterium')}</td>
-    ${item.levels.map(text => `<td>${escapeHtml(text.trim() || '—')}</td>`).join('')}
+    ${item.levels.map(text => `<td>${escapeHtml(text.trim() || '-')}</td>`).join('')}
     <td class="score-options">${[0,1,2].map(level => `<span class="${currentAssessment?.choices?.[item.id] === level ? 'selected' : ''}">${level * item.weight}</span>`).join('')}</td>
   </tr>`).join('');
   const max = maxPoints(valid), total = currentAssessment ? assessmentScore(valid,currentAssessment) : '';
@@ -407,7 +407,7 @@ function openPreview(currentAssessment = null) {
   $('#backButton').hidden = readOnlySharedAssessment;
   $('#downloadPackage').textContent = sharedLinkMode ? 'PDF downloaden' : 'Rubricpakket downloaden';
   $('.preview-note').textContent = sharedLinkMode
-    ? 'Gedeelde rubric — gegevens uit deze link worden niet online opgeslagen.'
+    ? 'Gedeelde rubric. Gegevens uit deze link worden niet online opgeslagen.'
     : 'Download de PDF en het rubricbestand samen in één rubricpakket.';
   const bands = gradeBands(max);
   $('#gradeScale').style.gridTemplateColumns = `27mm repeat(${bands.length},1fr)`;
@@ -562,7 +562,7 @@ function buildPdf(valid, max, currentAssessment = null) {
     pdf.text(comment,commentX,40);
   }
   const headers = ['Criterium', ...state.levelNames.map((x, i) => x.trim() || `Niveau ${i + 1}`), 'Score'];
-  const rows = valid.map(item => [item.title.trim() || 'Naamloos criterium', ...item.levels.map(x => x.trim() || '—'), '']);
+  const rows = valid.map(item => [item.title.trim() || 'Naamloos criterium', ...item.levels.map(x => x.trim() || '-'), '']);
   pdf.autoTable({
     startY: comment ? 44 : 40, head: [headers], body: rows, margin: {left:14,right:14,bottom:35},
     styles: {font:'helvetica',fontSize:7.2,cellPadding:comment ? 1.9 : 2.1,valign:'middle',lineColor:[203,211,214],lineWidth:.2,textColor:[24,48,62]},
@@ -680,10 +680,10 @@ function renderFill() {
   $('#teacherName').value = assessment.teacher || '';
   $('#assessmentComment').value = assessment.comment || '';
   $('#assessmentCommentCount').textContent = `${(assessment.comment || '').length}/160`;
-  $('#fillCriteria').innerHTML = valid.map(item => `<article class="fill-row" data-id="${item.id}"><div class="fill-row-title">${escapeHtml(item.title || 'Naamloos criterium')}</div>${item.levels.map((text,i) => `<button class="level-choice ${assessment.choices?.[item.id] === i ? 'selected' : ''}" data-level="${i}"><small>${escapeHtml(state.levelNames[i].trim() || `Niveau ${i + 1}`)}</small>${escapeHtml(text || '—')}<b>${i*item.weight}</b></button>`).join('')}</article>`).join('');
+  $('#fillCriteria').innerHTML = valid.map(item => `<article class="fill-row" data-id="${item.id}"><div class="fill-row-title">${escapeHtml(item.title || 'Naamloos criterium')}</div>${item.levels.map((text,i) => `<button class="level-choice ${assessment.choices?.[item.id] === i ? 'selected' : ''}" data-level="${i}"><small>${escapeHtml(state.levelNames[i].trim() || `Niveau ${i + 1}`)}</small>${escapeHtml(text || '-')}<b>${i*item.weight}</b></button>`).join('')}</article>`).join('');
   const answered = valid.filter(item => Number.isInteger(assessment.choices?.[item.id])).length, max = maxPoints(valid), total = assessmentScore(valid);
   $('#fillProgress').textContent = `${answered}/${valid.length}`; $('#fillTotal').textContent = `${total}/${max}`;
-  $('#fillGrade').textContent = answered === valid.length ? gradeFor(total,max).toFixed(1).replace('.',',') : '—';
+  $('#fillGrade').textContent = answered === valid.length ? gradeFor(total,max).toFixed(1).replace('.',',') : '-';
   saveAssessmentBook();
 }
 
@@ -697,8 +697,8 @@ function openSharedAssessment(currentAssessment) {
   $('#preview').classList.remove('active');
   $('#fillScreen').classList.remove('active');
   $('#sharedProjectTitle').textContent = state.title;
-  $('#sharedStudentName').textContent = currentAssessment.student || '—';
-  $('#sharedTeacherName').textContent = currentAssessment.teacher || '—';
+  $('#sharedStudentName').textContent = currentAssessment.student || '-';
+  $('#sharedTeacherName').textContent = currentAssessment.teacher || '-';
   const comment = String(currentAssessment.comment || '').trim();
   $('#sharedCommentText').textContent = comment;
   $('#sharedComment').hidden = !comment;
@@ -708,15 +708,15 @@ function openSharedAssessment(currentAssessment) {
       const selected = currentAssessment.choices?.[item.id] === i;
       const levelName = state.levelNames[i].trim() || `Niveau ${i + 1}`;
       const points = i * item.weight;
-      const label = `${levelName}: ${text || '—'}; ${points} ${points === 1 ? 'punt' : 'punten'}${selected ? '; geselecteerd' : ''}`;
+      const label = `${levelName}: ${text || '-'}; ${points} ${points === 1 ? 'punt' : 'punten'}${selected ? '; geselecteerd' : ''}`;
       return `<div class="level-choice ${selected ? 'selected' : ''}" role="group" aria-label="${escapeHtml(label)}">
-        <small>${escapeHtml(levelName)}</small>${escapeHtml(text || '—')}<b>${points}</b>
+        <small>${escapeHtml(levelName)}</small>${escapeHtml(text || '-')}<b>${points}</b>
       </div>`;
     }).join('')}
   </article>`).join('');
   const max = maxPoints(valid), total = assessmentScore(valid, currentAssessment);
   $('#sharedTotal').textContent = `${total}/${max}`;
-  $('#sharedGrade').textContent = isAssessmentComplete(currentAssessment, valid) ? gradeFor(total, max).toFixed(1).replace('.', ',') : '—';
+  $('#sharedGrade').textContent = isAssessmentComplete(currentAssessment, valid) ? gradeFor(total, max).toFixed(1).replace('.', ',') : '-';
   $('#sharedAssessmentScreen').classList.add('active');
   $('#sharedAssessmentScreen').setAttribute('aria-hidden', 'false');
   document.title = `${state.title || 'Rubric'} – Gedeelde beoordeling`;

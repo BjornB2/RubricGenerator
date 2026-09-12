@@ -26,7 +26,7 @@ Alle gegevens blijven op het apparaat van de gebruiker:
 - wijzigingen worden automatisch opgeslagen in de lokale browseropslag;
 - er worden geen leerlinggegevens naar een server gestuurd;
 - de toepassing gebruikt geen accounts, trackingcookies of externe database;
-- gedeelde links bevatten de rubricgegevens — en bij een leerlinglink de ingevulde beoordeling — in de URL zelf;
+- gedeelde links bevatten de rubricgegevens in de URL zelf, en bij een leerlinglink ook de ingevulde beoordeling;
 - wie een leerlinglink ontvangt, kan uitsluitend die gedeelde beoordeling bekijken.
 
 Behandel een ingevulde leerlinglink als een document met leerlinggegevens en deel hem alleen met de bedoelde ontvanger.
