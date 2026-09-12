@@ -33,9 +33,9 @@ Behandel een ingevulde leerlinglink als een document met leerlinggegevens en dee
 
 ### AVG en leerlinggegevens
 
-OnlineRubric ondersteunt gegevensminimalisatie en privacy door ontwerp doordat rubric- en leerlinggegevens uitsluitend in de lokale browser worden verwerkt. De toepassing heeft geen eigen gebruikersaccounts, database, analytics of trackingcookies. De statische website wordt via GitHub Pages aangeboden; GitHub registreert bij websitebezoek wel het IP-adres voor beveiligingsdoeleinden.
+OnlineRubric is technisch sterk privacyvriendelijk ingericht voor leerlinggegevens. Rubrics en beoordelingen worden uitsluitend in de lokale browser verwerkt. De toepassing heeft geen gebruikersaccounts, database, analytics, trackingcookies of externe scripts voor de werking van de app. De beheerder van OnlineRubric kan deze gegevens niet inzien. De statische website wordt via GitHub Pages aangeboden; GitHub registreert bij websitebezoek wel technische bezoekgegevens, waaronder het IP-adres, voor beveiligingsdoeleinden.
 
-Een gedeelde beoordeling staat gecomprimeerd in het deel van de URL achter `#`. Dat deel wordt niet naar de webserver gestuurd, maar is niet versleuteld: iedereen met de volledige link kan de beoordeling bekijken. De gebruiker en diens school blijven verantwoordelijk voor een passende grondslag, dataminimalisatie, veilige apparaten en deelkanalen, bewaartermijnen en de rechten van leerlingen. Het local-first ontwerp maakt verantwoord gebruik eenvoudiger, maar is op zichzelf geen garantie dat iedere toepassing AVG-conform is.
+Gegevens kunnen wel in de lokale browseropslag en in geëxporteerde bestanden terechtkomen. Een collegadeellink bevat alleen het rubricontwerp. Een leerlingdeellink bevat de rubric en uitsluitend de beoordeling van die ene leerling. Die inhoud staat gecomprimeerd in het deel van de URL achter `#` en wordt niet naar de webserver gestuurd, maar is niet versleuteld of centraal intrekbaar. Iedereen met de volledige leerlinglink kan de gedeelde beoordeling bekijken.
 
 ## Bestanden openen en opslaan
 
