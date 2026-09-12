@@ -514,7 +514,8 @@ function buildPdf(valid, max, currentAssessment = null) {
     pdf.setFontSize(8); pdf.setFont('helvetica','bold'); pdf.setTextColor(...orange); pdf.text(commentLabel,14,40);
     const commentX = 14 + pdf.getTextWidth(commentLabel) + 2;
     pdf.setFont('helvetica','normal'); pdf.setTextColor(...navy);
-    while (pdf.getTextWidth(comment) > 283 - commentX && pdf.getFontSize() > 6.2) pdf.setFontSize(pdf.getFontSize() - .2);
+    const commentWidth = pdf.getTextWidth(comment), availableCommentWidth = 283 - commentX;
+    if (commentWidth > availableCommentWidth) pdf.setFontSize(8 * availableCommentWidth / commentWidth);
     pdf.text(comment,commentX,40);
   }
   const headers = ['Criterium', ...state.levelNames.map((x, i) => x.trim() || `Niveau ${i + 1}`), 'Score'];
