@@ -33,9 +33,9 @@ Behandel een ingevulde leerlinglink als een document met leerlinggegevens en dee
 
 ### AVG en leerlinggegevens
 
-OnlineRubric is technisch sterk privacyvriendelijk ingericht voor leerlinggegevens. Rubrics en beoordelingen worden uitsluitend in de lokale browser verwerkt. De toepassing heeft geen gebruikersaccounts, database, analytics, trackingcookies of externe scripts voor de werking van de app. De beheerder van OnlineRubric kan deze gegevens niet inzien. De statische website wordt via GitHub Pages aangeboden; GitHub registreert bij websitebezoek wel technische bezoekgegevens, waaronder het IP-adres, voor beveiligingsdoeleinden.
+OnlineRubric is zeer sterk privacygericht ingericht voor leerlinggegevens. Rubrics, leerlingnamen, beoordelingen, cijfers en opmerkingen blijven lokaal in de browser en worden niet naar een OnlineRubric-database gestuurd. De toepassing heeft geen gebruikersaccounts, analytics, trackingcookies of externe scripts voor de werking van de app. De beheerder van OnlineRubric kan deze gegevens niet inzien.
 
-Gegevens kunnen wel in de lokale browseropslag en in geëxporteerde bestanden terechtkomen. Een collegadeellink bevat alleen het rubricontwerp. Een leerlingdeellink bevat de rubric en uitsluitend de beoordeling van die ene leerling. Die inhoud staat gecomprimeerd in het deel van de URL achter `#` en wordt niet naar de webserver gestuurd, maar is niet versleuteld of centraal intrekbaar. Iedereen met de volledige leerlinglink kan de gedeelde beoordeling bekijken.
+De website draait als statische website op GitHub Pages. GitHub registreert bij het laden technische bezoekgegevens, waaronder het IP-adres, voor beveiligingsdoeleinden, maar ontvangt niet de inhoud van rubrics of beoordelingen. Een collegadeellink bevat alleen het rubricontwerp. Een leerlingdeellink bevat uitsluitend de beoordeling van die ene leerling en is niet versleuteld of centraal intrekbaar. Iedereen met de volledige leerlinglink kan die beoordeling bekijken.
 
 ## Bestanden openen en opslaan
 
