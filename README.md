@@ -31,6 +31,12 @@ Alle gegevens blijven op het apparaat van de gebruiker:
 
 Behandel een ingevulde leerlinglink als een document met leerlinggegevens en deel hem alleen met de bedoelde ontvanger.
 
+### AVG en leerlinggegevens
+
+OnlineRubric ondersteunt gegevensminimalisatie en privacy door ontwerp doordat rubric- en leerlinggegevens uitsluitend in de lokale browser worden verwerkt. De toepassing heeft geen eigen gebruikersaccounts, database, analytics of trackingcookies. De statische website wordt via GitHub Pages aangeboden; GitHub registreert bij websitebezoek wel het IP-adres voor beveiligingsdoeleinden.
+
+Een gedeelde beoordeling staat gecomprimeerd in het deel van de URL achter `#`. Dat deel wordt niet naar de webserver gestuurd, maar is niet versleuteld: iedereen met de volledige link kan de beoordeling bekijken. De gebruiker en diens school blijven verantwoordelijk voor een passende grondslag, dataminimalisatie, veilige apparaten en deelkanalen, bewaartermijnen en de rechten van leerlingen. Het local-first ontwerp maakt verantwoord gebruik eenvoudiger, maar is op zichzelf geen garantie dat iedere toepassing AVG-conform is.
+
 ## Bestanden openen en opslaan
 
 Bij openen en opslaan kan worden gekozen uit drie varianten:
