@@ -20,7 +20,7 @@
   <meta name="twitter:description" content="Ontwerp duidelijke rubrics, beoordeel leerlingen online en download printklare PDF’s — volledig in je eigen browser.">
   <meta name="twitter:image" content="https://onlinerubric.nl/og.png">
   <title>OnlineRubric</title>
-  <link rel="stylesheet" href="styles.css?v=27">
+  <link rel="stylesheet" href="styles.css?v=28">
 </head>
 <body>
   <header class="app-header no-print">
@@ -170,7 +170,7 @@
         <label>Naam leerling <span><em id="previewStudent"></em></span></label>
         <label>Docent <span><em id="previewTeacher"></em></span></label>
       </div>
-      <p class="preview-comment" id="previewComment" hidden></p>
+      <p class="preview-comment" id="previewComment" hidden><strong>Toelichting:</strong> <span id="previewCommentText"></span></p>
       <div class="table-wrap">
         <table class="rubric-table">
           <thead><tr><th>Criterium</th><th id="previewLevel1">Onvoldoende</th><th id="previewLevel2">Voldoende</th><th id="previewLevel3">Goed</th><th>Score</th></tr></thead>
@@ -239,7 +239,7 @@
       <section class="settings-panel shared-summary" aria-label="Resultaat van de leerling">
         <div class="shared-person"><span>Leerling</span><strong id="sharedStudentName"></strong></div>
         <div class="shared-person"><span>Docent</span><strong id="sharedTeacherName"></strong></div>
-        <p class="shared-comment" id="sharedComment" hidden></p>
+        <p class="shared-comment" id="sharedComment" hidden><strong>Toelichting:</strong> <span id="sharedCommentText"></span></p>
         <div class="live-result shared-live-result">
           <span>Punten <b id="sharedTotal">0/0</b></span>
           <strong id="sharedGrade">—</strong><small>Cijfer</small>
@@ -290,6 +290,6 @@
   <script src="vendor/jspdf.umd.min.js"></script>
   <script src="vendor/jspdf.plugin.autotable.min.js"></script>
   <script src="vendor/jszip.min.js"></script>
-  <script src="app.js?v=25"></script>
+  <script src="app.js?v=26"></script>
 </body>
 </html>

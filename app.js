@@ -398,7 +398,7 @@ function openPreview(currentAssessment = null) {
   $('#previewStudent').textContent = currentAssessment?.student || '';
   $('#previewTeacher').textContent = currentAssessment?.teacher || '';
   const previewComment = String(currentAssessment?.comment || '').trim().replace(/\s+/g, ' ');
-  $('#previewComment').textContent = previewComment;
+  $('#previewCommentText').textContent = previewComment;
   $('#previewComment').hidden = !previewComment;
   $('#previewTotal').textContent = total;
   $('#previewGrade').textContent = isAssessmentComplete(currentAssessment,valid) ? gradeFor(total,max).toFixed(1).replace('.',',') : '';
@@ -510,9 +510,12 @@ function buildPdf(valid, max, currentAssessment = null) {
   pdf.text('Docent', 154, 35); pdf.line(169, 35, 283, 35);
   if (currentAssessment) { pdf.setFont('helvetica','normal'); pdf.setTextColor(...navy); pdf.text(currentAssessment.student || '',43,34); pdf.text(currentAssessment.teacher || '',171,34); }
   if (comment) {
-    pdf.setFont('helvetica','normal'); pdf.setTextColor(...navy); pdf.setFontSize(6.8);
-    while (pdf.getTextWidth(comment) > 269 && pdf.getFontSize() > 5.8) pdf.setFontSize(pdf.getFontSize() - .2);
-    pdf.text(comment,14,40);
+    const commentLabel = 'Toelichting:';
+    pdf.setFontSize(8); pdf.setFont('helvetica','bold'); pdf.setTextColor(...orange); pdf.text(commentLabel,14,40);
+    const commentX = 14 + pdf.getTextWidth(commentLabel) + 2;
+    pdf.setFont('helvetica','normal'); pdf.setTextColor(...navy);
+    while (pdf.getTextWidth(comment) > 283 - commentX && pdf.getFontSize() > 6.2) pdf.setFontSize(pdf.getFontSize() - .2);
+    pdf.text(comment,commentX,40);
   }
   const headers = ['Criterium', ...state.levelNames.map((x, i) => x.trim() || `Niveau ${i + 1}`), 'Score'];
   const rows = valid.map(item => [item.title.trim() || 'Naamloos criterium', ...item.levels.map(x => x.trim() || '—'), '']);
@@ -648,7 +651,7 @@ function openSharedAssessment(currentAssessment) {
   $('#sharedStudentName').textContent = currentAssessment.student || '—';
   $('#sharedTeacherName').textContent = currentAssessment.teacher || '—';
   const comment = String(currentAssessment.comment || '').trim();
-  $('#sharedComment').textContent = comment;
+  $('#sharedCommentText').textContent = comment;
   $('#sharedComment').hidden = !comment;
   $('#sharedCriteria').innerHTML = valid.map(item => `<article class="fill-row" data-id="${item.id}">
     <div class="fill-row-title">${escapeHtml(item.title || 'Naamloos criterium')}</div>
