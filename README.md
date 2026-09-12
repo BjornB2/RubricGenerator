@@ -39,7 +39,7 @@ Bij openen en opslaan kan worden gekozen uit drie varianten:
 2. **Alleen leerlinglijst** – de klas- of clusternaam en de namen van leerlingen, zonder rubric of beoordelingen.
 3. **Alles** – de rubric, leerlinglijst en alle aanwezige beoordelingen.
 
-Een afzonderlijke leerlinglijst wordt opgeslagen als `Leerlinglijst Klasnaam.json`. De klas- of clusternaam wordt alleen gebruikt voor lokale bestandsnamen en verschijnt niet in de rubric of PDF.
+Een afzonderlijke leerlinglijst wordt opgeslagen als `Leerlinglijst Klasnaam.rubric`. Alle `.rubric`-bestanden bevatten gewone JSON en oudere `.json`-exports kunnen nog steeds worden geopend. De klas- of clusternaam wordt alleen gebruikt voor lokale bestandsnamen en verschijnt niet in de rubric of PDF.
 
 ## Lokaal gebruiken
 

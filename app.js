@@ -461,7 +461,7 @@ function applyTheme() {
 function exportSettings() {
   const data = JSON.stringify({...state, exportedAt: new Date().toISOString()}, null, 2);
   const blob = new Blob([data], {type:'application/json'});
-  const link = Object.assign(document.createElement('a'), {href: URL.createObjectURL(blob), download: `${slug(state.title) || 'rubric'}.rubric.json`});
+  const link = Object.assign(document.createElement('a'), {href: URL.createObjectURL(blob), download: `${slug(state.title) || 'rubric'}.rubric`});
   link.click(); URL.revokeObjectURL(link.href); showToast('Rubric opgeslagen.');
 }
 
@@ -478,7 +478,7 @@ function downloadStudentList() {
   if (!data.students.length) { showToast('Vul eerst minimaal één leerlingnaam in.'); return; }
   const className = safeName(data.className) || 'Klas';
   const blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
-  const link = Object.assign(document.createElement('a'),{href:URL.createObjectURL(blob),download:`Leerlinglijst ${className}.json`});
+  const link = Object.assign(document.createElement('a'),{href:URL.createObjectURL(blob),download:`Leerlinglijst ${className}.rubric`});
   link.click(); setTimeout(() => URL.revokeObjectURL(link.href),1000); showToast('Leerlinglijst opgeslagen.');
 }
 
@@ -571,7 +571,7 @@ async function downloadPackage() {
     const folderName = safeName(state.title) || 'Rubric';
     const zip = new JSZip(), folder = zip.folder(folderName);
     folder.file(`${folderName}.pdf`, buildPdf(valid, max).output('arraybuffer'));
-    folder.file(`${folderName}.rubric.json`, JSON.stringify({...state, exportedAt:new Date().toISOString()}, null, 2));
+    folder.file(`${folderName}.rubric`, JSON.stringify({...state, exportedAt:new Date().toISOString()}, null, 2));
     const blob = await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}});
     const link = Object.assign(document.createElement('a'), {href:URL.createObjectURL(blob),download:`${folderName}.zip`});
     link.click(); setTimeout(() => URL.revokeObjectURL(link.href), 1000); showToast('Rubricpakket gedownload.');
@@ -715,7 +715,7 @@ async function downloadAllAssessments() {
       const order = String(index + 1).padStart(2,'0');
       folder.file(`${order} - ${safeName(item.student) || `Leerling ${index + 1}`}.pdf`, buildPdf(valid,maxPoints(valid),item).output('arraybuffer'));
     });
-    folder.file(`${folderName} - beoordelingen.json`, JSON.stringify(assessmentExportData(), null, 2));
+    folder.file(`${folderName} - beoordelingen.rubric`, JSON.stringify(assessmentExportData(), null, 2));
     const blob = await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}});
     const link = Object.assign(document.createElement('a'), {href:URL.createObjectURL(blob),download:`${folderName} - ingevulde rubrics.zip`});
     link.click(); setTimeout(() => URL.revokeObjectURL(link.href),1000);
@@ -740,7 +740,7 @@ function assessmentExportData() {
 function downloadAssessmentsJson() {
   const folderName = assessmentFileBase();
   const blob = new Blob([JSON.stringify(assessmentExportData(),null,2)],{type:'application/json'});
-  const link = Object.assign(document.createElement('a'),{href:URL.createObjectURL(blob),download:`${folderName} - beoordelingen.json`});
+  const link = Object.assign(document.createElement('a'),{href:URL.createObjectURL(blob),download:`${folderName} - beoordelingen.rubric`});
   link.click(); setTimeout(() => URL.revokeObjectURL(link.href),1000); showToast('Klasbestand opgeslagen.');
 }
 
