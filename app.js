@@ -47,7 +47,7 @@ function loadTheme() {
 }
 
 function blankAssessment(teacher = '') {
-  return {id:crypto.randomUUID(),rubricTitle:state?.title || '',student:'',teacher,choices:{}};
+  return {id:crypto.randomUUID(),rubricTitle:state?.title || '',student:'',teacher,comment:'',choices:{}};
 }
 
 function loadAssessmentBook() {
@@ -90,7 +90,7 @@ function restoreAssessmentExport(payload) {
     if (item?.choices && typeof item.choices === 'object') Object.entries(item.choices).forEach(([criterionId,level]) => {
       if (criterionIds.has(criterionId) && Number.isInteger(level) && level >= 0 && level <= 2) choices[criterionId] = level;
     });
-    return {id,rubricTitle:state.title,student:String(item?.student ?? '').slice(0,60),teacher:String(item?.teacher ?? '').slice(0,80),choices};
+    return {id,rubricTitle:state.title,student:String(item?.student ?? '').slice(0,60),teacher:String(item?.teacher ?? '').slice(0,80),comment:String(item?.comment ?? '').slice(0,160),choices};
   });
   if (!restored.length) restored.push(blankAssessment());
   assessmentBook = {rubricTitle:state.title,className:String(payload.className ?? '').slice(0,60),activeId:restored[0].id,assessments:restored};
@@ -397,6 +397,9 @@ function openPreview(currentAssessment = null) {
   $('#footerMax').textContent = max;
   $('#previewStudent').textContent = currentAssessment?.student || '';
   $('#previewTeacher').textContent = currentAssessment?.teacher || '';
+  const previewComment = String(currentAssessment?.comment || '').trim().replace(/\s+/g, ' ');
+  $('#previewComment').textContent = previewComment;
+  $('#previewComment').hidden = !previewComment;
   $('#previewTotal').textContent = total;
   $('#previewGrade').textContent = isAssessmentComplete(currentAssessment,valid) ? gradeFor(total,max).toFixed(1).replace('.',',') : '';
   previewAssessment = currentAssessment;
@@ -501,15 +504,21 @@ function buildPdf(valid, max, currentAssessment = null) {
   pdf.setFontSize(7.5); pdf.text('Eindcijfer', 241, 14);
   pdf.setDrawColor(...orange); pdf.setLineWidth(.5); pdf.roundedRect(259, 8, 24, 12, 1.4, 1.4);
   if (isAssessmentComplete(currentAssessment,valid)) { pdf.setTextColor(...navy); pdf.setFont('helvetica','bold'); pdf.setFontSize(12); pdf.text(gradeFor(assessmentScore(valid,currentAssessment),max).toFixed(1).replace('.',','),271,15.7,{align:'center'}); }
+  const comment = String(currentAssessment?.comment || '').trim().replace(/\s+/g, ' ');
   pdf.setDrawColor(82,101,109); pdf.setLineWidth(.25);
   pdf.text('Naam leerling', 14, 35); pdf.line(41, 35, 142, 35);
   pdf.text('Docent', 154, 35); pdf.line(169, 35, 283, 35);
   if (currentAssessment) { pdf.setFont('helvetica','normal'); pdf.setTextColor(...navy); pdf.text(currentAssessment.student || '',43,34); pdf.text(currentAssessment.teacher || '',171,34); }
+  if (comment) {
+    pdf.setFont('helvetica','normal'); pdf.setTextColor(...navy); pdf.setFontSize(6.8);
+    while (pdf.getTextWidth(comment) > 269 && pdf.getFontSize() > 5.8) pdf.setFontSize(pdf.getFontSize() - .2);
+    pdf.text(comment,14,40);
+  }
   const headers = ['Criterium', ...state.levelNames.map((x, i) => x.trim() || `Niveau ${i + 1}`), 'Score'];
   const rows = valid.map(item => [item.title.trim() || 'Naamloos criterium', ...item.levels.map(x => x.trim() || '—'), '']);
   pdf.autoTable({
-    startY: 40, head: [headers], body: rows, margin: {left:14,right:14,bottom:35},
-    styles: {font:'helvetica',fontSize:7.2,cellPadding:2.1,valign:'middle',lineColor:[203,211,214],lineWidth:.2,textColor:[24,48,62]},
+    startY: comment ? 44 : 40, head: [headers], body: rows, margin: {left:14,right:14,bottom:35},
+    styles: {font:'helvetica',fontSize:7.2,cellPadding:comment ? 1.9 : 2.1,valign:'middle',lineColor:[203,211,214],lineWidth:.2,textColor:[24,48,62]},
     headStyles: {fillColor:navy,textColor:255,fontStyle:'bold',halign:'center'},
     alternateRowStyles: {fillColor:[241,245,246]},
     columnStyles: {0:{cellWidth:43,fontStyle:'bold'},1:{cellWidth:64},2:{cellWidth:64},3:{cellWidth:64},4:{cellWidth:34,halign:'center',fontStyle:'bold'}},
@@ -617,6 +626,8 @@ function renderFill() {
   $('#className').value = assessmentBook.className || '';
   $('#studentName').value = assessment.student || '';
   $('#teacherName').value = assessment.teacher || '';
+  $('#assessmentComment').value = assessment.comment || '';
+  $('#assessmentCommentCount').textContent = `${(assessment.comment || '').length}/160`;
   $('#fillCriteria').innerHTML = valid.map(item => `<article class="fill-row" data-id="${item.id}"><div class="fill-row-title">${escapeHtml(item.title || 'Naamloos criterium')}</div>${item.levels.map((text,i) => `<button class="level-choice ${assessment.choices?.[item.id] === i ? 'selected' : ''}" data-level="${i}"><small>${escapeHtml(state.levelNames[i].trim() || `Niveau ${i + 1}`)}</small>${escapeHtml(text || '—')}<b>${i*item.weight}</b></button>`).join('')}</article>`).join('');
   const answered = valid.filter(item => Number.isInteger(assessment.choices?.[item.id])).length, max = maxPoints(valid), total = assessmentScore(valid);
   $('#fillProgress').textContent = `${answered}/${valid.length}`; $('#fillTotal').textContent = `${total}/${max}`;
@@ -636,6 +647,9 @@ function openSharedAssessment(currentAssessment) {
   $('#sharedProjectTitle').textContent = state.title;
   $('#sharedStudentName').textContent = currentAssessment.student || '—';
   $('#sharedTeacherName').textContent = currentAssessment.teacher || '—';
+  const comment = String(currentAssessment.comment || '').trim();
+  $('#sharedComment').textContent = comment;
+  $('#sharedComment').hidden = !comment;
   $('#sharedCriteria').innerHTML = valid.map(item => `<article class="fill-row" data-id="${item.id}">
     <div class="fill-row-title">${escapeHtml(item.title || 'Naamloos criterium')}</div>
     ${item.levels.map((text, i) => {
@@ -714,7 +728,7 @@ function assessmentExportData() {
     assessments:assessmentBook.assessments.map(item => {
       const answered = valid.filter(criterion => Number.isInteger(item.choices?.[criterion.id])).length;
       const total = assessmentScore(valid,item), complete = valid.length > 0 && answered === valid.length;
-      return {id:item.id,student:item.student,teacher:item.teacher,choices:item.choices,answered,criteriaCount:valid.length,total,max,complete,grade:complete ? gradeFor(total,max) : null};
+      return {id:item.id,student:item.student,teacher:item.teacher,comment:String(item.comment || '').slice(0,160),choices:item.choices,answered,criteriaCount:valid.length,total,max,complete,grade:complete ? gradeFor(total,max) : null};
     })
   };
 }
@@ -758,7 +772,7 @@ async function loadSharedLink() {
   try {
     const payload = JSON.parse(await gzipDecode(match[1]));
     state = normalizeState(payload.r); sharedLinkMode = true; renderEditor();
-    if (payload.a) assessment = {...payload.a,choices:payload.a.choices || {}};
+    if (payload.a) assessment = {...payload.a,comment:String(payload.a.comment || '').slice(0,160),choices:payload.a.choices || {}};
     if (payload.a) openSharedAssessment(assessment);
     else {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -897,6 +911,11 @@ document.addEventListener('click', event => {
 });
 $('#studentName').addEventListener('input', event => { assessment.student=event.target.value; renderFill(); });
 $('#teacherName').addEventListener('input', event => { assessment.teacher=event.target.value; renderFill(); });
+$('#assessmentComment').addEventListener('input', event => {
+  assessment.comment = event.target.value.slice(0,160);
+  $('#assessmentCommentCount').textContent = `${assessment.comment.length}/160`;
+  saveAssessmentBook();
+});
 $('#className').addEventListener('input', event => { assessmentBook.className=event.target.value; saveAssessmentBook(); });
 $('#fillCriteria').addEventListener('click', event => {
   const button=event.target.closest('.level-choice'), row=event.target.closest('.fill-row'); if(!button||!row)return;
