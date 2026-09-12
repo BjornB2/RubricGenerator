@@ -459,7 +459,7 @@ function applyTheme() {
 }
 
 const SAVE_FILE_TYPES = {
-  rubric: [{description:'OnlineRubric-bestand',accept:{'application/json':['.rubric']}}],
+  rubric: [{description:'OnlineRubric-bestand',accept:{'application/octet-stream':['.rubric']}}],
   pdf: [{description:'PDF-document',accept:{'application/pdf':['.pdf']}}],
   zip: [{description:'ZIP-archief',accept:{'application/zip':['.zip']}}]
 };
@@ -500,7 +500,7 @@ async function exportSettings() {
   const target = await chooseSaveTarget(fileName,SAVE_FILE_TYPES.rubric);
   if (!target) return;
   const data = JSON.stringify({...state, exportedAt: new Date().toISOString()}, null, 2);
-  const blob = new Blob([data], {type:'application/json'});
+  const blob = new Blob([data], {type:'application/octet-stream'});
   try { showSaveToast(await saveBlob(blob,target),'Rubric opgeslagen.'); }
   catch (error) { console.error(error); showToast('Opslaan is niet gelukt.'); }
 }
@@ -520,7 +520,7 @@ async function downloadStudentList() {
   const fileName = `Leerlinglijst ${className}.rubric`;
   const target = await chooseSaveTarget(fileName,SAVE_FILE_TYPES.rubric);
   if (!target) return;
-  const blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const blob = new Blob([JSON.stringify(data,null,2)],{type:'application/octet-stream'});
   try { showSaveToast(await saveBlob(blob,target),'Leerlinglijst opgeslagen.'); }
   catch (error) { console.error(error); showToast('Opslaan is niet gelukt.'); }
 }
@@ -792,7 +792,7 @@ async function downloadAssessmentsJson() {
   const fileName = `${folderName} - beoordelingen.rubric`;
   const target = await chooseSaveTarget(fileName,SAVE_FILE_TYPES.rubric);
   if (!target) return;
-  const blob = new Blob([JSON.stringify(assessmentExportData(),null,2)],{type:'application/json'});
+  const blob = new Blob([JSON.stringify(assessmentExportData(),null,2)],{type:'application/octet-stream'});
   try { showSaveToast(await saveBlob(blob,target),'Klasbestand opgeslagen.'); }
   catch (error) { console.error(error); showToast('Opslaan is niet gelukt.'); }
 }
