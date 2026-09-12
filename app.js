@@ -518,6 +518,10 @@ function studentListExportData() {
   };
 }
 
+function assessmentHasContent(item) {
+  return Boolean(item?.student?.trim() || item?.comment?.trim() || Object.keys(item?.choices || {}).length);
+}
+
 async function downloadStudentList() {
   const data = studentListExportData();
   if (!data.students.length) { showToast('Vul eerst minimaal één leerlingnaam in.'); return; }
@@ -531,8 +535,12 @@ async function downloadStudentList() {
 }
 
 function openRubricExportDialog() {
-  const count = assessmentBook.assessments.length;
-  $('#rubricExportAssessmentCount').textContent = `${count} beoordeling${count === 1 ? '' : 'en'}`;
+  const relevant = assessmentBook.assessments.filter(assessmentHasContent);
+  if (!relevant.length) { exportSettings(); return; }
+  const studentCount = relevant.filter(item => item.student.trim()).length;
+  const completedCount = relevant.filter(item => isAssessmentComplete(item)).length;
+  $('#rubricExportAssessmentCount').textContent = `${studentCount} leerling${studentCount === 1 ? '' : 'en'} en ${completedCount} volledige beoordeling${completedCount === 1 ? '' : 'en'}`;
+  $('#exportStudentListOnly').disabled = studentCount === 0;
   $('#rubricExportDialog').showModal();
 }
 
@@ -784,7 +792,7 @@ function assessmentExportData() {
   return {
     type:'rubricbouwer-beoordelingen',version:1,exportedAt:new Date().toISOString(),className:assessmentBook.className || '',
     rubric:{version:state.version,title:state.title,levelNames:state.levelNames,criteria:state.criteria},
-    assessments:assessmentBook.assessments.map(item => {
+    assessments:assessmentBook.assessments.filter(assessmentHasContent).map(item => {
       const answered = valid.filter(criterion => Number.isInteger(item.choices?.[criterion.id])).length;
       const total = assessmentScore(valid,item), complete = valid.length > 0 && answered === valid.length;
       return {id:item.id,student:item.student,teacher:item.teacher,comment:String(item.comment || '').slice(0,160),choices:item.choices,answered,criteriaCount:valid.length,total,max,complete,grade:complete ? gradeFor(total,max) : null};
