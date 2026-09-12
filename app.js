@@ -26,6 +26,10 @@ let saveTimer;
 const $ = (selector) => document.querySelector(selector);
 const list = $('#criteriaList');
 
+function safeIdentifier(value) {
+  return typeof value === 'string' && /^[A-Za-z0-9_-]{1,100}$/.test(value) ? value : crypto.randomUUID();
+}
+
 function loadState() {
   try {
     const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY));
@@ -84,7 +88,8 @@ function restoreAssessmentExport(payload) {
   state = normalizeState(payload.rubric);
   const criterionIds = new Set(state.criteria.map(item => item.id)), usedIds = new Set();
   const restored = payload.assessments.map(item => {
-    const id = typeof item?.id === 'string' && item.id && !usedIds.has(item.id) ? item.id : crypto.randomUUID();
+    const candidateId = safeIdentifier(item?.id);
+    const id = !usedIds.has(candidateId) ? candidateId : crypto.randomUUID();
     usedIds.add(id);
     const choices = {};
     if (item?.choices && typeof item.choices === 'object') Object.entries(item.choices).forEach(([criterionId,level]) => {
@@ -161,7 +166,7 @@ function normalizeState(input) {
   const names = Array.isArray(input.levelNames) ? input.levelNames.slice(0, 3) : [];
   while (names.length < 3) names.push(['Onvoldoende', 'Voldoende', 'Goed'][names.length]);
   const criteria = Array.isArray(input.criteria) ? input.criteria.map(item => ({
-    id: typeof item.id === 'string' ? item.id : crypto.randomUUID(),
+    id: safeIdentifier(item.id),
     title: String(item.title ?? '').slice(0, 100),
     levels: [0, 1, 2].map(i => String(item.levels?.[i] ?? '').slice(0, 400)),
     weight: Math.min(3, Math.max(1, Number(item.weight) || 1))
@@ -178,7 +183,7 @@ function escapeHtml(value) {
 }
 
 function criterionTemplate(item, index) {
-  return `<article class="criterion-card" data-id="${item.id}">
+  return `<article class="criterion-card" data-id="${escapeHtml(item.id)}">
     <div class="criterion-top">
       <button class="drag-handle" type="button" draggable="true" title="Versleep criterium" aria-label="Versleep criterium ${index + 1}" aria-roledescription="sleepgreep">
         <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="7" cy="5" r="1.5"/><circle cx="13" cy="5" r="1.5"/><circle cx="7" cy="10" r="1.5"/><circle cx="13" cy="10" r="1.5"/><circle cx="7" cy="15" r="1.5"/><circle cx="13" cy="15" r="1.5"/></svg>
@@ -669,7 +674,7 @@ function renderFill() {
   const activeIndex = assessmentBook.assessments.findIndex(item => item.id === assessment.id);
   $('#studentSelect').innerHTML = assessmentBook.assessments.map((item,index) => {
     const complete = valid.length && valid.every(criterion => Number.isInteger(item.choices?.[criterion.id]));
-    return `<option value="${item.id}" ${item.id === assessment.id ? 'selected' : ''}>${complete ? '✓' : '○'} ${index + 1}. ${escapeHtml(item.student || 'Naam nog invullen')}</option>`;
+    return `<option value="${escapeHtml(item.id)}" ${item.id === assessment.id ? 'selected' : ''}>${complete ? '✓' : '○'} ${index + 1}. ${escapeHtml(item.student || 'Naam nog invullen')}</option>`;
   }).join('');
   $('#studentCounter').textContent = `Leerling ${activeIndex + 1} van ${assessmentBook.assessments.length}`;
   $('#previousStudentButton').disabled = activeIndex <= 0;
@@ -680,7 +685,7 @@ function renderFill() {
   $('#teacherName').value = assessment.teacher || '';
   $('#assessmentComment').value = assessment.comment || '';
   $('#assessmentCommentCount').textContent = `${(assessment.comment || '').length}/160`;
-  $('#fillCriteria').innerHTML = valid.map(item => `<article class="fill-row" data-id="${item.id}"><div class="fill-row-title">${escapeHtml(item.title || 'Naamloos criterium')}</div>${item.levels.map((text,i) => `<button class="level-choice ${assessment.choices?.[item.id] === i ? 'selected' : ''}" data-level="${i}"><small>${escapeHtml(state.levelNames[i].trim() || `Niveau ${i + 1}`)}</small>${escapeHtml(text || '-')}<b>${i*item.weight}</b></button>`).join('')}</article>`).join('');
+  $('#fillCriteria').innerHTML = valid.map(item => `<article class="fill-row" data-id="${escapeHtml(item.id)}"><div class="fill-row-title">${escapeHtml(item.title || 'Naamloos criterium')}</div>${item.levels.map((text,i) => `<button class="level-choice ${assessment.choices?.[item.id] === i ? 'selected' : ''}" data-level="${i}"><small>${escapeHtml(state.levelNames[i].trim() || `Niveau ${i + 1}`)}</small>${escapeHtml(text || '-')}<b>${i*item.weight}</b></button>`).join('')}</article>`).join('');
   const answered = valid.filter(item => Number.isInteger(assessment.choices?.[item.id])).length, max = maxPoints(valid), total = assessmentScore(valid);
   $('#fillProgress').textContent = `${answered}/${valid.length}`; $('#fillTotal').textContent = `${total}/${max}`;
   $('#fillGrade').textContent = answered === valid.length ? gradeFor(total,max).toFixed(1).replace('.',',') : '-';
@@ -702,7 +707,7 @@ function openSharedAssessment(currentAssessment) {
   const comment = String(currentAssessment.comment || '').trim();
   $('#sharedCommentText').textContent = comment;
   $('#sharedComment').hidden = !comment;
-  $('#sharedCriteria').innerHTML = valid.map(item => `<article class="fill-row" data-id="${item.id}">
+  $('#sharedCriteria').innerHTML = valid.map(item => `<article class="fill-row" data-id="${escapeHtml(item.id)}">
     <div class="fill-row-title">${escapeHtml(item.title || 'Naamloos criterium')}</div>
     ${item.levels.map((text, i) => {
       const selected = currentAssessment.choices?.[item.id] === i;

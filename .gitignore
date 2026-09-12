@@ -1,2 +1,14 @@
 .DS_Store
 tmp/
+output/
+
+# Lokale exports en gevoelige configuratie
+*.rubric
+*.rubric.json
+*.pdf
+*.zip
+.env
+.env.*
+*.pem
+*.key
+*.p12
