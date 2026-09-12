@@ -41,6 +41,8 @@ Bij openen en opslaan kan worden gekozen uit drie varianten:
 
 Een afzonderlijke leerlinglijst wordt opgeslagen als `Leerlinglijst Klasnaam.rubric`. Alle `.rubric`-bestanden bevatten gewone JSON en oudere `.json`-exports kunnen nog steeds worden geopend. De klas- of clusternaam wordt alleen gebruikt voor lokale bestandsnamen en verschijnt niet in de rubric of PDF.
 
+In browsers met ondersteuning voor een bestandskiezer, zoals Chrome en Edge, kan bij het opslaan een locatie en bestandsnaam worden gekozen. Andere browsers gebruiken automatisch hun normale downloadfunctie.
+
 ## Lokaal gebruiken
 
 Er is geen installatie of buildstap nodig. Open `index.html` rechtstreeks in een moderne browser. Voor gedrag dat een normale webomgeving vereist, kan de map ook via een eenvoudige lokale webserver worden geopend.

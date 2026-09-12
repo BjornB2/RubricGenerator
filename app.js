@@ -458,11 +458,51 @@ function applyTheme() {
   $('#mobileThemeToggle').setAttribute('aria-pressed', theme === 'dark');
 }
 
-function exportSettings() {
+const SAVE_FILE_TYPES = {
+  rubric: [{description:'OnlineRubric-bestand',accept:{'application/json':['.rubric']}}],
+  pdf: [{description:'PDF-document',accept:{'application/pdf':['.pdf']}}],
+  zip: [{description:'ZIP-archief',accept:{'application/zip':['.zip']}}]
+};
+
+async function chooseSaveTarget(suggestedName, types) {
+  if (typeof window.showSaveFilePicker !== 'function') return {suggestedName};
+  try {
+    const handle = await window.showSaveFilePicker({suggestedName,types});
+    return {handle,suggestedName};
+  } catch (error) {
+    if (error?.name === 'AbortError') return null;
+    console.warn('Opslaglocatie kiezen is niet beschikbaar; gewone download wordt gebruikt.', error);
+    return {suggestedName};
+  }
+}
+
+async function saveBlob(blob, target) {
+  if (!target) return null;
+  if (target.handle) {
+    const writable = await target.handle.createWritable();
+    await writable.write(blob);
+    await writable.close();
+    return 'saved';
+  }
+  const url = URL.createObjectURL(blob);
+  const link = Object.assign(document.createElement('a'), {href:url,download:target.suggestedName});
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url),1000);
+  return 'download';
+}
+
+function showSaveToast(result, savedMessage) {
+  showToast(result === 'saved' ? savedMessage : 'Download gestart.');
+}
+
+async function exportSettings() {
+  const fileName = `${slug(state.title) || 'rubric'}.rubric`;
+  const target = await chooseSaveTarget(fileName,SAVE_FILE_TYPES.rubric);
+  if (!target) return;
   const data = JSON.stringify({...state, exportedAt: new Date().toISOString()}, null, 2);
   const blob = new Blob([data], {type:'application/json'});
-  const link = Object.assign(document.createElement('a'), {href: URL.createObjectURL(blob), download: `${slug(state.title) || 'rubric'}.rubric`});
-  link.click(); URL.revokeObjectURL(link.href); showToast('Rubric opgeslagen.');
+  try { showSaveToast(await saveBlob(blob,target),'Rubric opgeslagen.'); }
+  catch (error) { console.error(error); showToast('Opslaan is niet gelukt.'); }
 }
 
 function studentListExportData() {
@@ -473,13 +513,16 @@ function studentListExportData() {
   };
 }
 
-function downloadStudentList() {
+async function downloadStudentList() {
   const data = studentListExportData();
   if (!data.students.length) { showToast('Vul eerst minimaal één leerlingnaam in.'); return; }
   const className = safeName(data.className) || 'Klas';
+  const fileName = `Leerlinglijst ${className}.rubric`;
+  const target = await chooseSaveTarget(fileName,SAVE_FILE_TYPES.rubric);
+  if (!target) return;
   const blob = new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
-  const link = Object.assign(document.createElement('a'),{href:URL.createObjectURL(blob),download:`Leerlinglijst ${className}.rubric`});
-  link.click(); setTimeout(() => URL.revokeObjectURL(link.href),1000); showToast('Leerlinglijst opgeslagen.');
+  try { showSaveToast(await saveBlob(blob,target),'Leerlinglijst opgeslagen.'); }
+  catch (error) { console.error(error); showToast('Opslaan is niet gelukt.'); }
 }
 
 function openRubricExportDialog() {
@@ -564,27 +607,32 @@ function buildPdf(valid, max, currentAssessment = null) {
 async function downloadPackage() {
   const valid = state.criteria.filter(item => item.title.trim() || item.levels.some(x => x.trim()));
   if (!valid.length) { showToast('Vul eerst minimaal één criterium in.'); return; }
+  const folderName = safeName(state.title) || 'Rubric';
+  const target = await chooseSaveTarget(`${folderName}.zip`,SAVE_FILE_TYPES.zip);
+  if (!target) return;
   const button = $('#downloadPackage'), original = button.textContent;
   button.disabled = true; button.textContent = 'Pakket maken…';
   try {
     const max = valid.reduce((sum, item) => sum + item.weight * 2, 0);
-    const folderName = safeName(state.title) || 'Rubric';
     const zip = new JSZip(), folder = zip.folder(folderName);
     folder.file(`${folderName}.pdf`, buildPdf(valid, max).output('arraybuffer'));
     folder.file(`${folderName}.rubric`, JSON.stringify({...state, exportedAt:new Date().toISOString()}, null, 2));
     const blob = await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}});
-    const link = Object.assign(document.createElement('a'), {href:URL.createObjectURL(blob),download:`${folderName}.zip`});
-    link.click(); setTimeout(() => URL.revokeObjectURL(link.href), 1000); showToast('Rubricpakket gedownload.');
+    showSaveToast(await saveBlob(blob,target),'Rubricpakket opgeslagen.');
   } catch (error) { console.error(error); showToast('Downloaden is niet gelukt.'); }
   finally { button.disabled = false; button.textContent = original; }
 }
 
-function downloadPreviewPdf() {
+async function downloadPreviewPdf() {
   const valid = validCriteria();
   if (!valid.length) { showToast('Deze rubric bevat geen criteria.'); return; }
   const studentSuffix = previewAssessment?.student ? ` - ${safeName(previewAssessment.student)}` : '';
-  buildPdf(valid, maxPoints(valid), previewAssessment).save(`${safeName(state.title) || 'Rubric'}${studentSuffix}.pdf`);
-  showToast('PDF gedownload.');
+  const fileName = `${safeName(state.title) || 'Rubric'}${studentSuffix}.pdf`;
+  const target = await chooseSaveTarget(fileName,SAVE_FILE_TYPES.pdf);
+  if (!target) return;
+  try {
+    showSaveToast(await saveBlob(buildPdf(valid,maxPoints(valid),previewAssessment).output('blob'),target),'PDF opgeslagen.');
+  } catch (error) { console.error(error); showToast('Opslaan is niet gelukt.'); }
 }
 
 function safeName(value) { return String(value).trim().replace(/[<>:"/\\|?*\x00-\x1F]/g,'-').replace(/[. ]+$/,'').slice(0,80); }
@@ -707,19 +755,21 @@ async function downloadAllAssessments() {
   const completed = named.filter(item => isAssessmentComplete(item,valid));
   const skipped = named.length - completed.length;
   if (!completed.length) { showToast('Rond eerst minimaal één beoordeling volledig af.'); return; }
+  const folderName = assessmentFileBase();
+  const target = await chooseSaveTarget(`${folderName} - ingevulde rubrics.zip`,SAVE_FILE_TYPES.zip);
+  if (!target) return;
   const button = $('#downloadAllButton');
   button.disabled = true; button.setAttribute('aria-busy','true');
   try {
-    const folderName = assessmentFileBase(), zip = new JSZip(), folder = zip.folder(folderName);
+    const zip = new JSZip(), folder = zip.folder(folderName);
     completed.forEach((item,index) => {
       const order = String(index + 1).padStart(2,'0');
       folder.file(`${order} - ${safeName(item.student) || `Leerling ${index + 1}`}.pdf`, buildPdf(valid,maxPoints(valid),item).output('arraybuffer'));
     });
     folder.file(`${folderName} - beoordelingen.rubric`, JSON.stringify(assessmentExportData(), null, 2));
     const blob = await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}});
-    const link = Object.assign(document.createElement('a'), {href:URL.createObjectURL(blob),download:`${folderName} - ingevulde rubrics.zip`});
-    link.click(); setTimeout(() => URL.revokeObjectURL(link.href),1000);
-    showToast(`${completed.length} PDF’s en het klasbestand gedownload${skipped ? `; ${skipped} onvolledige beoordeling${skipped === 1 ? '' : 'en'} overgeslagen` : ''}.`);
+    const result = await saveBlob(blob,target);
+    showSaveToast(result,`${completed.length} PDF’s en het klasbestand opgeslagen${skipped ? `; ${skipped} onvolledige beoordeling${skipped === 1 ? '' : 'en'} overgeslagen` : ''}.`);
   } catch (error) { console.error(error); showToast('De gezamenlijke download is niet gelukt.'); }
   finally { button.disabled = false; button.removeAttribute('aria-busy'); }
 }
@@ -737,11 +787,14 @@ function assessmentExportData() {
   };
 }
 
-function downloadAssessmentsJson() {
+async function downloadAssessmentsJson() {
   const folderName = assessmentFileBase();
+  const fileName = `${folderName} - beoordelingen.rubric`;
+  const target = await chooseSaveTarget(fileName,SAVE_FILE_TYPES.rubric);
+  if (!target) return;
   const blob = new Blob([JSON.stringify(assessmentExportData(),null,2)],{type:'application/json'});
-  const link = Object.assign(document.createElement('a'),{href:URL.createObjectURL(blob),download:`${folderName} - beoordelingen.rubric`});
-  link.click(); setTimeout(() => URL.revokeObjectURL(link.href),1000); showToast('Klasbestand opgeslagen.');
+  try { showSaveToast(await saveBlob(blob,target),'Klasbestand opgeslagen.'); }
+  catch (error) { console.error(error); showToast('Opslaan is niet gelukt.'); }
 }
 
 async function gzipEncode(value) {
@@ -881,10 +934,15 @@ $('#previousStudentButton').addEventListener('click', () => stepStudentAssessmen
 $('#nextStudentButton').addEventListener('click', () => stepStudentAssessment(1));
 $('#studentSelect').addEventListener('change', event => selectStudentAssessment(event.target.value));
 $('#downloadAllButton').addEventListener('click', downloadAllAssessments);
-$('#filledPdfButton').addEventListener('click', () => {
+$('#filledPdfButton').addEventListener('click', async () => {
   const valid = validCriteria(); if (!assessment.student.trim()) { showToast('Vul eerst de voornaam van de leerling in.'); return; }
   if (!isAssessmentComplete(assessment,valid)) { showToast('Vul eerst alle criteria voor deze leerling in.'); return; }
-  buildPdf(valid,maxPoints(valid),assessment).save(`${assessmentFileBase()} - ${safeName(assessment.student)}.pdf`);
+  const fileName = `${assessmentFileBase()} - ${safeName(assessment.student)}.pdf`;
+  const target = await chooseSaveTarget(fileName,SAVE_FILE_TYPES.pdf);
+  if (!target) return;
+  try {
+    showSaveToast(await saveBlob(buildPdf(valid,maxPoints(valid),assessment).output('blob'),target),'PDF opgeslagen.');
+  } catch (error) { console.error(error); showToast('Opslaan is niet gelukt.'); }
 });
 $('#sharedPdfButton').addEventListener('click', downloadPreviewPdf);
 
