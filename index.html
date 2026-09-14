@@ -22,7 +22,7 @@
   <meta name="twitter:description" content="Ontwerp duidelijke rubrics, beoordeel leerlingen online en download printklare PDF’s, volledig in je eigen browser.">
   <meta name="twitter:image" content="https://onlinerubric.nl/og.png">
   <title>OnlineRubric</title>
-  <link rel="stylesheet" href="styles.css?v=31">
+  <link rel="stylesheet" href="styles.css?v=32">
 </head>
 <body>
   <header class="app-header no-print">
@@ -238,30 +238,26 @@
       </div>
     </div>
     <main class="fill-shell">
-      <nav class="student-tabbar" aria-label="Leerlingen">
+      <section class="student-tabbar" aria-label="Beoordeling en leerlingen beheren">
         <div class="student-switcher">
           <button class="student-step" id="previousStudentButton" aria-label="Vorige leerling">←</button>
           <label><span id="studentCounter">Leerling 1 van 1</span><select id="studentSelect" aria-label="Kies een leerling"></select></label>
           <button class="student-step" id="nextStudentButton" aria-label="Volgende leerling">→</button>
         </div>
-        <div class="class-details">
-          <label class="class-context">
-            <span>Klas / cluster <small>voor alle leerlingen</small></span>
-            <input id="className" type="text" maxlength="60" placeholder="Bijvoorbeeld: 2B" autocomplete="off">
-          </label>
-          <label class="class-context">
-            <span>Docent / code <small>voor alle leerlingen</small></span>
-            <input id="teacherName" type="text" maxlength="80" placeholder="Bijvoorbeeld: HEB" autocomplete="off">
-          </label>
-        </div>
+        <label class="class-context">
+          <span>Klas / cluster <small>voor alle leerlingen</small></span>
+          <input id="className" type="text" maxlength="60" placeholder="Bijvoorbeeld: 2B" autocomplete="off">
+        </label>
+        <label class="class-context">
+          <span>Docent / code <small>voor alle leerlingen</small></span>
+          <input id="teacherName" type="text" maxlength="80" placeholder="Bijvoorbeeld: HEB" autocomplete="off">
+        </label>
         <div class="management-icons student-actions" aria-label="Klas en leerlingen beheren">
           <button type="button" id="addStudentButton" aria-label="Nieuwe leerling" title="Nieuwe leerling"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="4"/><path d="M2.5 21a6.5 6.5 0 0 1 13 0M19 8v6m-3-3h6"/></svg></button>
           <button type="button" class="danger" id="removeStudentButton" aria-label="Leerling verwijderen" title="Leerling verwijderen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3m3 0-1 13H7L6 7m4 4v5m4-5v5"/></svg></button>
           <button type="button" id="downloadAllButton" aria-label="Alle PDF’s downloaden" title="Alle PDF’s downloaden"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 19V6a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v10Z"/><path d="M12 10v7m-3-3 3 3 3-3"/></svg></button>
         </div>
-      </nav>
-      <section class="fill-identity settings-panel">
-        <label class="field">Voornaam leerling<input id="studentName" type="text" maxlength="60" placeholder="Bijvoorbeeld: Sanne"></label>
+        <label class="field student-name-field">Naam leerling<input id="studentName" type="text" maxlength="60" placeholder="Bijvoorbeeld: Sanne"></label>
         <label class="field assessment-comment-field">Opmerking voor leerling
           <input id="assessmentComment" type="text" maxlength="160" placeholder="Korte, persoonlijke toelichting" aria-describedby="assessmentCommentHelp">
           <span class="assessment-comment-help" id="assessmentCommentHelp">Zichtbaar voor de leerling en opgenomen in de deellink. Houd het kort. <b id="assessmentCommentCount">0/160</b></span>
