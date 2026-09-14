@@ -179,7 +179,7 @@ function prepareMagisterImport(csvText, returnToFill = false) {
     prefix:prefixIndex >= 0 ? String(row[prefixIndex] || '').trim() : '',
     lastName:String(row[lastNameIndex] || '').trim(),
     className:classIndex >= 0 ? String(row[classIndex] || '').trim() : ''
-  })).filter(student => student.firstName);
+  })).filter(student => student.firstName).sort((left, right) => left.firstName.localeCompare(right.firstName, 'nl-NL', {sensitivity:'base',numeric:true}));
   if (!students.length) throw new Error('Geen leerlingen');
   const classes = [...new Set(students.map(student => student.className).filter(Boolean))];
   pendingMagisterImport = {students,className:classes.length === 1 ? classes[0] : '',returnToFill};
