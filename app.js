@@ -20,6 +20,7 @@ let sharedLinkMode = false;
 let previewAssessment = null;
 let pendingAssessmentImport = null;
 let pendingImportReturnToFill = false;
+let pendingMagisterImport = null;
 let helpReturnToFill = false;
 let linkLengthWarningShown = false;
 let saveTimer;
@@ -113,16 +114,99 @@ function restoreStudentList(payload) {
   if (!Array.isArray(source)) throw new Error('Ongeldige leerlinglijst');
   const students = source.map(item => typeof item === 'string' ? item : item?.student)
     .map(name => String(name ?? '').trim().slice(0,60)).filter(Boolean);
-  const restored = students.map(student => ({...blankAssessment(),rubricTitle:state.title,student}));
-  if (!restored.length) restored.push(blankAssessment());
+  const defaultTeacher = String(assessment?.teacher || '').slice(0,80);
+  const restored = students.map(student => ({...blankAssessment(defaultTeacher),rubricTitle:state.title,student}));
+  if (!restored.length) restored.push(blankAssessment(defaultTeacher));
   restored.forEach(item => { item.rubricTitle = state.title; });
   assessmentBook = {
     rubricTitle:state.title,
-    className:String(payload?.className ?? '').slice(0,60),
+    className:String(payload?.className || '').slice(0,60),
     activeId:restored[0].id,
     assessments:restored
   };
   assessment = restored[0]; saveAssessmentBook();
+  return students.length;
+}
+
+function parseCsv(text) {
+  const source = String(text || '').replace(/^\uFEFF/, '');
+  const firstLine = source.split(/\r?\n/, 1)[0] || '';
+  const delimiters = [',', ';', '\t'];
+  const delimiter = delimiters.reduce((best, candidate) => firstLine.split(candidate).length > firstLine.split(best).length ? candidate : best, ',');
+  const rows = []; let row = [], field = '', quoted = false;
+  for (let index = 0; index < source.length; index += 1) {
+    const character = source[index];
+    if (quoted) {
+      if (character === '"' && source[index + 1] === '"') { field += '"'; index += 1; }
+      else if (character === '"') quoted = false;
+      else field += character;
+    } else if (character === '"') quoted = true;
+    else if (character === delimiter) { row.push(field); field = ''; }
+    else if (character === '\n' || character === '\r') {
+      if (character === '\r' && source[index + 1] === '\n') index += 1;
+      row.push(field); field = '';
+      if (row.some(value => value.trim())) rows.push(row);
+      row = [];
+    } else field += character;
+  }
+  row.push(field);
+  if (row.some(value => value.trim())) rows.push(row);
+  return rows;
+}
+
+function normalizeCsvHeader(value) {
+  return String(value || '').replace(/^\uFEFF/, '').trim().toLocaleLowerCase('nl-NL').replace(/[^a-z0-9]/g, '');
+}
+
+function prepareMagisterImport(csvText, returnToFill = false) {
+  const rows = parseCsv(csvText);
+  if (rows.length < 2) throw new Error('Lege CSV');
+  const headers = rows[0].map(normalizeCsvHeader);
+  const column = name => headers.indexOf(name);
+  const firstNameIndex = column('roepnaam'), prefixIndex = column('tussenvoegsel'), lastNameIndex = column('achternaam'), classIndex = column('klas');
+  if (firstNameIndex < 0 || lastNameIndex < 0) throw new Error('Geen Magister-leerlinglijst');
+  const students = rows.slice(1, 1001).map(row => ({
+    firstName:String(row[firstNameIndex] || '').trim(),
+    prefix:prefixIndex >= 0 ? String(row[prefixIndex] || '').trim() : '',
+    lastName:String(row[lastNameIndex] || '').trim(),
+    className:classIndex >= 0 ? String(row[classIndex] || '').trim() : ''
+  })).filter(student => student.firstName);
+  if (!students.length) throw new Error('Geen leerlingen');
+  const classes = [...new Set(students.map(student => student.className).filter(Boolean))];
+  pendingMagisterImport = {students,className:classes.length === 1 ? classes[0] : '',returnToFill};
+  const classText = classes.length === 1 ? ` voor klas ${classes[0]}` : classes.length > 1 ? ' uit meerdere klassen' : '';
+  $('#magisterImportSummary').textContent = `${students.length} leerling${students.length === 1 ? '' : 'en'} gevonden${classText}. Kies hoe de namen worden weergegeven.`;
+  $('#magisterImportWarning').hidden = !assessmentBook.assessments.some(assessmentHasContent);
+  $('#magisterImportDialog').showModal();
+}
+
+function closeMagisterImportDialog() {
+  pendingMagisterImport = null;
+  $('#magisterImportDialog').close();
+}
+
+function formatMagisterNames(students, useFullNames) {
+  const firstNameCounts = students.reduce((counts, student) => {
+    const key = student.firstName.toLocaleLowerCase('nl-NL');
+    counts.set(key, (counts.get(key) || 0) + 1);
+    return counts;
+  }, new Map());
+  return students.map(student => {
+    if (useFullNames) return [student.firstName,student.prefix,student.lastName].filter(Boolean).join(' ').replace(/\s+/g, ' ').slice(0,60);
+    const duplicate = firstNameCounts.get(student.firstName.toLocaleLowerCase('nl-NL')) > 1;
+    const initial = student.lastName.match(/[\p{L}\p{N}]/u)?.[0]?.toLocaleUpperCase('nl-NL');
+    return `${student.firstName}${duplicate && initial ? ` ${initial}.` : ''}`.slice(0,60);
+  });
+}
+
+function importMagisterStudents(useFullNames) {
+  if (!pendingMagisterImport) return;
+  const {students,className,returnToFill} = pendingMagisterImport;
+  const names = formatMagisterNames(students, useFullNames);
+  const addedCount = restoreStudentList({type:'rubricbouwer-leerlingen',className,students:names});
+  closeMagisterImportDialog();
+  if (returnToFill) renderFill();
+  showToast(`${addedCount} leerlingen uit Magister geopend.`);
 }
 
 function closeAssessmentImportDialog() {
@@ -139,6 +223,7 @@ function prepareImport(payload, returnToFill = false) {
   $('#importRubricOnly').disabled = !hasRubric;
   $('#importStudentListOnly').disabled = !hasStudentList;
   $('#importRubricAndAssessments').disabled = !isFull;
+  $('#assessmentStudentListWarning').hidden = !hasStudentList || !assessmentBook.assessments.some(assessmentHasContent);
   if (isFull) {
     const count = payload.assessments.length;
     $('#assessmentImportSummary').textContent = `Dit bestand bevat een rubric, een leerlinglijst en ${count} beoordeling${count === 1 ? '' : 'en'}.`;
@@ -905,10 +990,13 @@ function toggleTheme() {
 $('#importFile').addEventListener('change', async event => {
   const file = event.target.files[0]; if (!file) return;
   try {
-    const payload = JSON.parse(await file.text());
-    prepareImport(payload, $('#fillScreen').classList.contains('active'));
+    if (file.size > 2 * 1024 * 1024) throw new Error('Bestand te groot');
+    const text = await file.text();
+    const returnToFill = $('#fillScreen').classList.contains('active');
+    if (file.name.toLocaleLowerCase('nl-NL').endsWith('.csv') || file.type === 'text/csv') prepareMagisterImport(text, returnToFill);
+    else prepareImport(JSON.parse(text), returnToFill);
   }
-  catch { showToast('Dit bestand is geen geldige rubric, leerlinglijst of klasbestand.'); }
+  catch { showToast('Dit bestand is geen geldige rubric, leerlinglijst, klasbestand of Magister-CSV.'); }
   event.target.value = '';
 });
 
@@ -916,6 +1004,10 @@ $('#newRubric').addEventListener('click', startNewRubric);
 $('#importButton').addEventListener('click', () => $('#importFile').click());
 $('#cancelAssessmentImport').addEventListener('click', closeAssessmentImportDialog);
 $('#assessmentImportDialog').addEventListener('cancel', () => { pendingAssessmentImport = null; pendingImportReturnToFill = false; });
+$('#cancelMagisterImport').addEventListener('click', closeMagisterImportDialog);
+$('#magisterImportDialog').addEventListener('cancel', closeMagisterImportDialog);
+$('#importMagisterFirstNames').addEventListener('click', () => importMagisterStudents(false));
+$('#importMagisterFullNames').addEventListener('click', () => importMagisterStudents(true));
 $('#importRubricOnly').addEventListener('click', () => {
   if (!pendingAssessmentImport) return;
   const payload = pendingAssessmentImport, returnToFill = pendingImportReturnToFill;
@@ -926,9 +1018,9 @@ $('#importRubricOnly').addEventListener('click', () => {
 $('#importStudentListOnly').addEventListener('click', () => {
   if (!pendingAssessmentImport) return;
   const payload = pendingAssessmentImport, returnToFill = pendingImportReturnToFill;
-  restoreStudentList(payload); closeAssessmentImportDialog();
+  const addedCount = restoreStudentList(payload); closeAssessmentImportDialog();
   if (returnToFill) renderFill();
-  showToast(`${assessmentBook.assessments.filter(item => item.student).length} leerlingen geopend.`);
+  showToast(`${addedCount} leerlingen geopend. De rubric is behouden.`);
 });
 $('#importRubricAndAssessments').addEventListener('click', () => {
   if (!pendingAssessmentImport) return;

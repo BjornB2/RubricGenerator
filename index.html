@@ -41,7 +41,7 @@
         <button type="button" id="exportButton" aria-label="Bestand opslaan" title="Bestand opslaan"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h12l3 3v15H4V4a1 1 0 0 1 1-1Z"/><path d="M8 3v6h8V3M8 21v-7h8v7"/></svg></button>
         <button type="button" id="shareRubricButton" aria-label="Rubric delen" title="Rubric delen"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 10.5 6.8-4M8.6 13.5l6.8 4"/></svg></button>
       </div>
-      <input type="file" id="importFile" accept="application/json,.json,.rubric" hidden>
+      <input type="file" id="importFile" accept="application/json,text/csv,.json,.rubric,.csv" hidden>
     </nav>
   </header>
 
@@ -146,10 +146,10 @@
       </ol>
 
       <section class="help-grid">
-        <article><h2>Meerdere leerlingen</h2><p>Voeg leerlingen toe met <strong>Nieuwe leerling</strong>. Gebruik de pijlen of de keuzelijst om door de klas te gaan. Een vinkje betekent dat alle criteria voor die leerling zijn ingevuld.</p></article>
+        <article><h2>Leerlinglijsten openen</h2><p>Voeg leerlingen één voor één toe met <strong>Nieuwe leerling</strong> of open een opgeslagen leerlinglijst. Je kunt ook rechtstreeks een Magister-export als CSV-bestand gebruiken en kiezen voor alleen roepnamen of volledige namen. De rubric blijft behouden; de geopende leerlinglijst vervangt wel de huidige leerlinglijst en beoordelingen.</p></article>
         <article><h2>Delen met een collega</h2><p><strong>Rubric delen</strong> kopieert een link met het volledige ontwerp erin. Een collega opent de link in de browser en krijgt direct een eigen lokale kopie in de editor. Wijzigingen in die kopie veranderen jouw rubric niet. Na aanpassingen moet de collega de rubric opnieuw opslaan of een nieuwe deellink maken om de gewijzigde versie verder te delen.</p></article>
         <article><h2>Delen met een leerling</h2><p><strong>Deellink voor leerling</strong> maakt een alleen-lezen weergave. Zo kun je vooraf de lege rubric delen en later het resultaat met de eventuele toelichting. Bij een onvolledige rubric volgt eerst een waarschuwing. De leerling krijgt geen toegang tot de editor of andere leerlingen.</p></article>
-        <article><h2>Bewaren en openen</h2><p>Je werk wordt automatisch in deze browser bewaard. Met <strong>Bestand opslaan</strong> en <strong>Bestand openen</strong> kun je een rubric, een leerlinglijst of alles inclusief beoordelingen bewaren en later weer gebruiken.</p></article>
+        <article><h2>Bewaren en openen</h2><p>Je werk wordt automatisch in deze browser bewaard. Met <strong>Bestand opslaan</strong> en <strong>Bestand openen</strong> kun je een rubric, een leerlinglijst of alles inclusief beoordelingen bewaren en later weer gebruiken. Een losse leerlinglijst vervangt de huidige leerlinglijst, maar niet de openstaande rubric.</p></article>
         <article><h2>Hoe ontstaat het cijfer?</h2><p>Als je bij ieder criterium het middelste niveau kiest, is het eindcijfer precies een 6,0. Alles op het laagste niveau geeft een 1,0 en alles op het hoogste niveau een 10. Tussenliggende resultaten worden afgerond op halve cijfers.</p></article>
         <article><h2>PDF als extra mogelijkheid</h2><p>Gebruik de <strong>PDF-preview</strong> wanneer je een rubric wilt printen of een beoordeling als document wilt bewaren. Je kunt ook voor alle voltooide beoordelingen tegelijk PDF’s downloaden.</p></article>
         <article><h2>Waarom zijn deellinks zo lang?</h2><p>Er wordt niets in een database of op een server opgeslagen. Daarom zit de volledige rubric, en bij een leerlinglink ook de ingevulde beoordeling, samengeperst in de link zelf. Meer criteria en langere beschrijvingen maken de link langer. Deel een ingevulde link alleen met de bedoelde leerling.</p></article>
@@ -293,10 +293,11 @@
       <p class="eyebrow">Bestand openen</p>
       <h2 id="assessmentImportTitle">Wat wil je openen?</h2>
       <p id="assessmentImportSummary">Kies welke gegevens je uit dit bestand wilt openen.</p>
+      <p class="dialog-warning" id="assessmentStudentListWarning" hidden>Let op: de huidige leerlinglijst en beoordelingen worden vervangen. De openstaande rubric blijft behouden.</p>
       <div class="import-dialog-actions">
         <button class="button button-ghost" id="cancelAssessmentImport">Annuleren</button>
         <button class="button button-dark" id="importRubricOnly">Alleen rubric openen</button>
-        <button class="button button-dark" id="importStudentListOnly">Alleen leerlinglijst openen</button>
+        <button class="button button-dark" id="importStudentListOnly">Leerlinglijst vervangen</button>
         <button class="button button-accent" id="importRubricAndAssessments">Alles openen</button>
       </div>
     </div>
@@ -312,6 +313,20 @@
         <button class="button button-dark" id="exportRubricOnly">Alleen rubric opslaan</button>
         <button class="button button-dark" id="exportStudentListOnly">Alleen leerlinglijst opslaan</button>
         <button class="button button-accent" id="exportRubricAndAssessments">Alles opslaan</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog class="import-dialog" id="magisterImportDialog" aria-labelledby="magisterImportTitle">
+    <div class="import-dialog-content">
+      <p class="eyebrow">Magister-leerlinglijst</p>
+      <h2 id="magisterImportTitle">Hoe wil je de namen tonen?</h2>
+      <p id="magisterImportSummary">Kies hoe de leerlingnamen in OnlineRubric komen te staan.</p>
+      <p class="dialog-warning" id="magisterImportWarning" hidden>Let op: de huidige leerlinglijst en beoordelingen worden vervangen. De openstaande rubric blijft behouden.</p>
+      <div class="import-dialog-actions magister-import-actions">
+        <button class="button button-ghost" id="cancelMagisterImport">Annuleren</button>
+        <button class="button button-dark" id="importMagisterFirstNames">Alleen voornamen</button>
+        <button class="button button-accent" id="importMagisterFullNames">Voor- en achternaam</button>
       </div>
     </div>
   </dialog>
@@ -340,6 +355,6 @@
   <script src="vendor/jspdf.umd.min.js"></script>
   <script src="vendor/jspdf.plugin.autotable.min.js"></script>
   <script src="vendor/jszip.min.js"></script>
-  <script src="app.js?v=34"></script>
+  <script src="app.js?v=35"></script>
 </body>
 </html>

@@ -34,7 +34,8 @@ Een leerling krijgt via de deellink alleen de eigen, afgeronde beoordeling te zi
 - Per criterium een gewicht van 1, 2 of 3 instellen
 - Automatische puntentelling en omzetting naar cijfers van 1 tot en met 10
 - Meerdere leerlingen binnen één klas of cluster beoordelen
-- Een leerlinglijst afzonderlijk openen en opslaan
+- Een leerlinglijst afzonderlijk openen en opslaan zonder de huidige rubric te vervangen
+- Een Magister-leerlinglijst uit CSV importeren met roepnamen of volledige namen
 - Een complete klas met rubric en beoordelingen openen en opslaan
 - Een rubric of ingevulde beoordeling delen via een zelfstandige deellink
 - Eén leerling-PDF of alle voltooide PDF's als ZIP downloaden
@@ -65,7 +66,7 @@ Een collegadeellink bevat alleen het rubricontwerp. Een leerlingdeellink bevat u
 Bij openen en opslaan kan worden gekozen uit drie varianten:
 
 1. **Alleen rubric:** het rubricontwerp zonder leerlingen of beoordelingen.
-2. **Alleen leerlinglijst:** de klas- of clusternaam en de namen van leerlingen, zonder rubric of beoordelingen.
+2. **Alleen leerlinglijst:** de klas- of clusternaam en de namen van leerlingen, zonder rubric of beoordelingen. Bij het openen vervangt deze de huidige leerlinglijst en beoordelingen; de openstaande rubric blijft behouden.
 3. **Alles:** de rubric, leerlinglijst en alle aanwezige beoordelingen.
 
 Een afzonderlijke leerlinglijst wordt opgeslagen als `Leerlinglijst Klasnaam.rubric`. Alle `.rubric`-bestanden bevatten gewone JSON en oudere `.json`-exports kunnen nog steeds worden geopend. De klas- of clusternaam wordt alleen gebruikt voor lokale bestandsnamen en verschijnt niet in de rubric of PDF.
