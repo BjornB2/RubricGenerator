@@ -34,6 +34,7 @@ Een leerling krijgt via de deellink alleen de eigen, afgeronde beoordeling te zi
 - Per criterium een gewicht van 1, 2 of 3 instellen
 - Automatische puntentelling en omzetting naar cijfers van 1 tot en met 10
 - Meerdere leerlingen binnen één klas of cluster beoordelen
+- Klas of cluster en docentnaam of docentcode één keer instellen voor de hele beoordeling
 - Een leerlinglijst afzonderlijk openen en opslaan zonder de huidige rubric te vervangen
 - Een Magister-leerlinglijst uit CSV importeren met roepnamen of volledige namen
 - Een complete klas met rubric en beoordelingen openen en opslaan

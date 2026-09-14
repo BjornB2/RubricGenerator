@@ -58,15 +58,19 @@ function blankAssessment(teacher = '') {
 function loadAssessmentBook() {
   try {
     const saved = JSON.parse(localStorage.getItem(ASSESSMENT_BOOK_KEY));
-    if (Array.isArray(saved?.assessments) && saved.assessments.length) return {...saved,className:String(saved.className ?? '').slice(0,60)};
+    if (Array.isArray(saved?.assessments) && saved.assessments.length) {
+      const activeSaved = saved.assessments.find(item => item.id === saved.activeId);
+      const teacherName = String(saved.teacherName ?? activeSaved?.teacher ?? saved.assessments.find(item => item?.teacher)?.teacher ?? '').slice(0,80);
+      return {...saved,className:String(saved.className ?? '').slice(0,60),teacherName,assessments:saved.assessments.map(item => ({...item,teacher:teacherName}))};
+    }
     const legacy = JSON.parse(localStorage.getItem(ASSESSMENT_KEY));
     if (legacy) {
       const migrated = {...legacy,id:legacy.id || crypto.randomUUID(),choices:legacy.choices || {}};
-      return {rubricTitle:migrated.rubricTitle || '',className:'',activeId:migrated.id,assessments:[migrated]};
+      return {rubricTitle:migrated.rubricTitle || '',className:'',teacherName:String(migrated.teacher || '').slice(0,80),activeId:migrated.id,assessments:[migrated]};
     }
   } catch {}
   const first = blankAssessment();
-  return {rubricTitle:'',className:'',activeId:first.id,assessments:[first]};
+  return {rubricTitle:'',className:'',teacherName:'',activeId:first.id,assessments:[first]};
 }
 
 function activeAssessment() {
@@ -75,12 +79,14 @@ function activeAssessment() {
 
 function saveAssessmentBook() {
   assessmentBook.activeId = assessment.id;
+  assessmentBook.teacherName = String(assessmentBook.teacherName || '').slice(0,80);
+  assessmentBook.assessments.forEach(item => { item.teacher = assessmentBook.teacherName; });
   localStorage.setItem(ASSESSMENT_BOOK_KEY, JSON.stringify(assessmentBook));
 }
 
 function resetAssessmentBook() {
   const first = blankAssessment(); first.rubricTitle = state.title;
-  assessmentBook = {rubricTitle:state.title,className:'',activeId:first.id,assessments:[first]};
+  assessmentBook = {rubricTitle:state.title,className:'',teacherName:'',activeId:first.id,assessments:[first]};
   assessment = first; saveAssessmentBook();
 }
 
@@ -98,8 +104,10 @@ function restoreAssessmentExport(payload) {
     });
     return {id,rubricTitle:state.title,student:String(item?.student ?? '').slice(0,60),teacher:String(item?.teacher ?? '').slice(0,80),comment:String(item?.comment ?? '').slice(0,160),choices};
   });
-  if (!restored.length) restored.push(blankAssessment());
-  assessmentBook = {rubricTitle:state.title,className:String(payload.className ?? '').slice(0,60),activeId:restored[0].id,assessments:restored};
+  const teacherName = String(payload.teacherName ?? restored.find(item => item.teacher)?.teacher ?? '').slice(0,80);
+  restored.forEach(item => { item.teacher = teacherName; });
+  if (!restored.length) restored.push(blankAssessment(teacherName));
+  assessmentBook = {rubricTitle:state.title,className:String(payload.className ?? '').slice(0,60),teacherName,activeId:restored[0].id,assessments:restored};
   assessment = restored[0]; sharedLinkMode = false;
   localStorage.setItem(STORAGE_KEY,JSON.stringify(state)); saveAssessmentBook(); renderEditor(); applyTheme();
 }
@@ -114,13 +122,14 @@ function restoreStudentList(payload) {
   if (!Array.isArray(source)) throw new Error('Ongeldige leerlinglijst');
   const students = source.map(item => typeof item === 'string' ? item : item?.student)
     .map(name => String(name ?? '').trim().slice(0,60)).filter(Boolean);
-  const defaultTeacher = String(assessment?.teacher || '').slice(0,80);
+  const defaultTeacher = String(assessmentBook.teacherName || assessment?.teacher || '').slice(0,80);
   const restored = students.map(student => ({...blankAssessment(defaultTeacher),rubricTitle:state.title,student}));
   if (!restored.length) restored.push(blankAssessment(defaultTeacher));
   restored.forEach(item => { item.rubricTitle = state.title; });
   assessmentBook = {
     rubricTitle:state.title,
     className:String(payload?.className || '').slice(0,60),
+    teacherName:defaultTeacher,
     activeId:restored[0].id,
     assessments:restored
   };
@@ -745,9 +754,10 @@ function openFill() {
   const valid = validCriteria();
   if (!state.title.trim() || !valid.length) { showToast('Vul eerst de projectnaam en minimaal één criterium in.'); return; }
   if (assessmentBook.rubricTitle !== state.title) {
-    const first = blankAssessment(assessment.teacher || '');
+    const teacherName = String(assessmentBook.teacherName || assessment.teacher || '').slice(0,80);
+    const first = blankAssessment(teacherName);
     first.rubricTitle = state.title;
-    assessmentBook = {rubricTitle:state.title,className:'',activeId:first.id,assessments:[first]};
+    assessmentBook = {rubricTitle:state.title,className:'',teacherName,activeId:first.id,assessments:[first]};
     assessment = first;
   }
   closeMobileMenu(); document.body.classList.add('mobile-actions-hidden');
@@ -774,8 +784,8 @@ function renderFill() {
   $('#nextStudentButton').disabled = activeIndex >= assessmentBook.assessments.length - 1;
   $('#removeStudentButton').disabled = assessmentBook.assessments.length === 1;
   $('#className').value = assessmentBook.className || '';
+  $('#teacherName').value = assessmentBook.teacherName || '';
   $('#studentName').value = assessment.student || '';
-  $('#teacherName').value = assessment.teacher || '';
   $('#assessmentComment').value = assessment.comment || '';
   $('#assessmentCommentCount').textContent = `${(assessment.comment || '').length}/160`;
   $('#fillCriteria').innerHTML = valid.map(item => `<article class="fill-row" data-id="${escapeHtml(item.id)}"><div class="fill-row-title">${escapeHtml(item.title || 'Naamloos criterium')}</div>${item.levels.map((text,i) => `<button class="level-choice ${assessment.choices?.[item.id] === i ? 'selected' : ''}" data-level="${i}"><small>${escapeHtml(state.levelNames[i].trim() || `Niveau ${i + 1}`)}</small>${escapeHtml(text || '-')}<b>${i*item.weight}</b></button>`).join('')}</article>`).join('');
@@ -829,7 +839,7 @@ function openSharedAssessment(currentAssessment) {
 }
 
 function addStudentAssessment() {
-  const next = blankAssessment(assessment.teacher || '');
+  const next = blankAssessment(assessmentBook.teacherName || '');
   next.rubricTitle = state.title;
   assessmentBook.assessments.push(next); assessmentBook.activeId = next.id; assessment = next;
   renderFill(); $('#studentName').focus();
@@ -882,7 +892,7 @@ async function downloadAllAssessments() {
 function assessmentExportData() {
   const valid = validCriteria(), max = maxPoints(valid);
   return {
-    type:'rubricbouwer-beoordelingen',version:1,exportedAt:new Date().toISOString(),className:assessmentBook.className || '',
+    type:'rubricbouwer-beoordelingen',version:1,exportedAt:new Date().toISOString(),className:assessmentBook.className || '',teacherName:assessmentBook.teacherName || '',
     rubric:{version:state.version,title:state.title,levelNames:state.levelNames,criteria:state.criteria},
     assessments:assessmentBook.assessments.filter(assessmentHasContent).map(item => {
       const answered = valid.filter(criterion => Number.isInteger(item.choices?.[criterion.id])).length;
@@ -1100,7 +1110,11 @@ document.addEventListener('click', event => {
   });
 });
 $('#studentName').addEventListener('input', event => { assessment.student=event.target.value; renderFill(); });
-$('#teacherName').addEventListener('input', event => { assessment.teacher=event.target.value; renderFill(); });
+$('#teacherName').addEventListener('input', event => {
+  assessmentBook.teacherName = event.target.value.slice(0,80);
+  assessmentBook.assessments.forEach(item => { item.teacher = assessmentBook.teacherName; });
+  saveAssessmentBook();
+});
 $('#assessmentComment').addEventListener('input', event => {
   assessment.comment = event.target.value.slice(0,160);
   $('#assessmentCommentCount').textContent = `${assessment.comment.length}/160`;

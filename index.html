@@ -146,7 +146,7 @@
       </ol>
 
       <section class="help-grid">
-        <article><h2>Leerlinglijsten openen</h2><p>Voeg leerlingen één voor één toe met <strong>Nieuwe leerling</strong> of open een opgeslagen leerlinglijst. Je kunt ook rechtstreeks een Magister-export als CSV-bestand gebruiken en kiezen voor alleen roepnamen of volledige namen. De rubric blijft behouden; de geopende leerlinglijst vervangt wel de huidige leerlinglijst en beoordelingen.</p></article>
+        <article><h2>Leerlinglijsten openen</h2><p>Voeg leerlingen één voor één toe met <strong>Nieuwe leerling</strong> of open een opgeslagen leerlinglijst. Je kunt ook rechtstreeks een Magister-export als CSV-bestand gebruiken en kiezen voor alleen roepnamen of volledige namen. Vul klas en docent één keer in voor de hele lijst. De rubric blijft behouden; de geopende leerlinglijst vervangt wel de huidige leerlinglijst en beoordelingen.</p></article>
         <article><h2>Delen met een collega</h2><p><strong>Rubric delen</strong> kopieert een link met het volledige ontwerp erin. Een collega opent de link in de browser en krijgt direct een eigen lokale kopie in de editor. Wijzigingen in die kopie veranderen jouw rubric niet. Na aanpassingen moet de collega de rubric opnieuw opslaan of een nieuwe deellink maken om de gewijzigde versie verder te delen.</p></article>
         <article><h2>Delen met een leerling</h2><p><strong>Deellink voor leerling</strong> maakt een alleen-lezen weergave. Zo kun je vooraf de lege rubric delen en later het resultaat met de eventuele toelichting. Bij een onvolledige rubric volgt eerst een waarschuwing. De leerling krijgt geen toegang tot de editor of andere leerlingen.</p></article>
         <article><h2>Bewaren en openen</h2><p>Je werk wordt automatisch in deze browser bewaard. Met <strong>Bestand opslaan</strong> en <strong>Bestand openen</strong> kun je een rubric, een leerlinglijst of alles inclusief beoordelingen bewaren en later weer gebruiken. Een losse leerlinglijst vervangt de huidige leerlinglijst, maar niet de openstaande rubric.</p></article>
@@ -244,10 +244,16 @@
           <label><span id="studentCounter">Leerling 1 van 1</span><select id="studentSelect" aria-label="Kies een leerling"></select></label>
           <button class="student-step" id="nextStudentButton" aria-label="Volgende leerling">→</button>
         </div>
-        <label class="class-context">
-          <span>Klas / cluster <small>voor alle leerlingen</small></span>
-          <input id="className" type="text" maxlength="60" placeholder="Bijvoorbeeld: 2B" autocomplete="off">
-        </label>
+        <div class="class-details">
+          <label class="class-context">
+            <span>Klas / cluster <small>voor alle leerlingen</small></span>
+            <input id="className" type="text" maxlength="60" placeholder="Bijvoorbeeld: 2B" autocomplete="off">
+          </label>
+          <label class="class-context">
+            <span>Docent / code <small>voor alle leerlingen</small></span>
+            <input id="teacherName" type="text" maxlength="80" placeholder="Bijvoorbeeld: HEB" autocomplete="off">
+          </label>
+        </div>
         <div class="management-icons student-actions" aria-label="Klas en leerlingen beheren">
           <button type="button" id="addStudentButton" aria-label="Nieuwe leerling" title="Nieuwe leerling"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="4"/><path d="M2.5 21a6.5 6.5 0 0 1 13 0M19 8v6m-3-3h6"/></svg></button>
           <button type="button" class="danger" id="removeStudentButton" aria-label="Leerling verwijderen" title="Leerling verwijderen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3m3 0-1 13H7L6 7m4 4v5m4-5v5"/></svg></button>
@@ -256,7 +262,6 @@
       </nav>
       <section class="fill-identity settings-panel">
         <label class="field">Voornaam leerling<input id="studentName" type="text" maxlength="60" placeholder="Bijvoorbeeld: Sanne"></label>
-        <label class="field">Docent<input id="teacherName" type="text" maxlength="80" placeholder="Naam of afkorting"></label>
         <label class="field assessment-comment-field">Opmerking voor leerling
           <input id="assessmentComment" type="text" maxlength="160" placeholder="Korte, persoonlijke toelichting" aria-describedby="assessmentCommentHelp">
           <span class="assessment-comment-help" id="assessmentCommentHelp">Zichtbaar voor de leerling en opgenomen in de deellink. Houd het kort. <b id="assessmentCommentCount">0/160</b></span>
@@ -355,6 +360,6 @@
   <script src="vendor/jspdf.umd.min.js"></script>
   <script src="vendor/jspdf.plugin.autotable.min.js"></script>
   <script src="vendor/jszip.min.js"></script>
-  <script src="app.js?v=35"></script>
+  <script src="app.js?v=36"></script>
 </body>
 </html>
