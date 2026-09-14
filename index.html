@@ -142,13 +142,13 @@
         <li><span>1</span><div><h2>Maak de rubric</h2><p>Geef het project een naam, benoem de drie niveaus en beschrijf per criterium wat je op elk niveau verwacht. Houd namen en beschrijvingen kort en concreet: alle tekst gaat mee in de deellink. Voeg zoveel criteria toe als nodig.</p></div></li>
         <li><span>2</span><div><h2>Bepaal het gewicht</h2><p>De schuif heeft drie standen. De drie niveaus leveren per criterium 0, 1 of 2 keer dat gewicht op. Een criterium kan daardoor maximaal 2, 4 of 6 punten opleveren.</p></div></li>
         <li><span>3</span><div><h2>Beoordeel online</h2><p>Kies <strong>Online invullen</strong>, voeg leerlingen toe en selecteer per criterium het passende niveau. Je kunt ook een korte toelichting voor de leerling toevoegen. Het cijfer verschijnt zodra alle criteria zijn beoordeeld.</p></div></li>
-        <li><span>4</span><div><h2>Deel het resultaat</h2><p>Maak na een volledige beoordeling een persoonlijke deellink. De leerling ziet een duidelijke, alleen-lezen weergave met uitsluitend de eigen beoordeling. Een deellink is een momentopname; na een aanpassing maak en deel je een nieuwe link.</p></div></li>
+        <li><span>4</span><div><h2>Deel de rubric of beoordeling</h2><p>Deel vooraf een lege rubric of na afloop een ingevulde beoordeling. De leerling ziet een duidelijke, alleen-lezen weergave. Een deellink is een momentopname; na een aanpassing maak en deel je een nieuwe link.</p></div></li>
       </ol>
 
       <section class="help-grid">
         <article><h2>Meerdere leerlingen</h2><p>Voeg leerlingen toe met <strong>Nieuwe leerling</strong>. Gebruik de pijlen of de keuzelijst om door de klas te gaan. Een vinkje betekent dat alle criteria voor die leerling zijn ingevuld.</p></article>
         <article><h2>Delen met een collega</h2><p><strong>Rubric delen</strong> kopieert een link met het volledige ontwerp erin. Een collega opent de link in de browser en krijgt direct een eigen lokale kopie in de editor. Wijzigingen in die kopie veranderen jouw rubric niet. Na aanpassingen moet de collega de rubric opnieuw opslaan of een nieuwe deellink maken om de gewijzigde versie verder te delen.</p></article>
-        <article><h2>Delen met een leerling</h2><p>Na een volledige beoordeling maakt <strong>Deellink voor leerling</strong> een alleen-lezen weergave van het resultaat en de eventuele toelichting. De leerling krijgt geen toegang tot de editor of andere leerlingen.</p></article>
+        <article><h2>Delen met een leerling</h2><p><strong>Deellink voor leerling</strong> maakt een alleen-lezen weergave. Zo kun je vooraf de lege rubric delen en later het resultaat met de eventuele toelichting. Bij een onvolledige rubric volgt eerst een waarschuwing. De leerling krijgt geen toegang tot de editor of andere leerlingen.</p></article>
         <article><h2>Bewaren en openen</h2><p>Je werk wordt automatisch in deze browser bewaard. Met <strong>Bestand opslaan</strong> en <strong>Bestand openen</strong> kun je een rubric, een leerlinglijst of alles inclusief beoordelingen bewaren en later weer gebruiken.</p></article>
         <article><h2>Hoe ontstaat het cijfer?</h2><p>Als je bij ieder criterium het middelste niveau kiest, is het eindcijfer precies een 6,0. Alles op het laagste niveau geeft een 1,0 en alles op het hoogste niveau een 10. Tussenliggende resultaten worden afgerond op halve cijfers.</p></article>
         <article><h2>PDF als extra mogelijkheid</h2><p>Gebruik de <strong>PDF-preview</strong> wanneer je een rubric wilt printen of een beoordeling als document wilt bewaren. Je kunt ook voor alle voltooide beoordelingen tegelijk PDF’s downloaden.</p></article>
@@ -270,15 +270,15 @@
 
   <section id="sharedAssessmentScreen" class="fill-screen shared-assessment-screen no-print" aria-hidden="true">
     <div class="fill-toolbar shared-toolbar">
-      <div class="shared-toolbar-title"><strong id="sharedProjectTitle"></strong><small>Gedeelde beoordeling</small></div>
+      <div class="shared-toolbar-title"><strong id="sharedProjectTitle"></strong><small id="sharedViewLabel">Gedeelde beoordeling</small></div>
       <button class="button button-accent" id="sharedPdfButton">PDF downloaden</button>
     </div>
     <main class="fill-shell shared-assessment-shell">
-      <section class="settings-panel shared-summary" aria-label="Resultaat van de leerling">
+      <section class="settings-panel shared-summary" id="sharedSummary" aria-label="Resultaat van de leerling">
         <div class="shared-person"><span>Leerling</span><strong id="sharedStudentName"></strong></div>
         <div class="shared-person"><span>Docent</span><strong id="sharedTeacherName"></strong></div>
         <p class="shared-comment" id="sharedComment" hidden><strong>Toelichting:</strong> <span id="sharedCommentText"></span></p>
-        <div class="live-result shared-live-result">
+        <div class="live-result shared-live-result" id="sharedLiveResult">
           <span>Punten <b id="sharedTotal">0/0</b></span>
           <strong id="sharedGrade">-</strong><small>Cijfer</small>
         </div>
@@ -316,6 +316,18 @@
     </div>
   </dialog>
 
+  <dialog class="import-dialog" id="incompleteShareDialog" aria-labelledby="incompleteShareTitle">
+    <div class="import-dialog-content">
+      <p class="eyebrow">Deellink voor leerling</p>
+      <h2 id="incompleteShareTitle">Deze rubric is nog niet volledig ingevuld</h2>
+      <p>Je kunt hem toch als alleen-lezen momentopname delen. Latere wijzigingen verschijnen niet automatisch in deze link; maak daarna een nieuwe link.</p>
+      <div class="import-dialog-actions confirmation-dialog-actions">
+        <button class="button button-ghost" id="cancelIncompleteShare">Annuleren</button>
+        <button class="button button-accent" id="confirmIncompleteShare">Toch link kopiëren</button>
+      </div>
+    </div>
+  </dialog>
+
   <aside class="link-length-warning no-print" id="linkLengthWarning" role="status" aria-live="polite" hidden>
     <strong>Houd de deellink compact</strong>
     <p>Korte, concrete criteria en niveaus zorgen voor een beter leesbare rubric én een kortere deellink.</p>
@@ -328,6 +340,6 @@
   <script src="vendor/jspdf.umd.min.js"></script>
   <script src="vendor/jspdf.plugin.autotable.min.js"></script>
   <script src="vendor/jszip.min.js"></script>
-  <script src="app.js?v=33"></script>
+  <script src="app.js?v=34"></script>
 </body>
 </html>

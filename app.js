@@ -702,6 +702,10 @@ function renderFill() {
 
 function openSharedAssessment(currentAssessment) {
   const valid = validCriteria();
+  const complete = isAssessmentComplete(currentAssessment, valid);
+  const answered = valid.filter(item => Number.isInteger(currentAssessment.choices?.[item.id])).length;
+  const hasPersonalDetails = Boolean(String(currentAssessment.student || '').trim() || String(currentAssessment.teacher || '').trim() || String(currentAssessment.comment || '').trim());
+  const showSummary = complete || answered > 0 || hasPersonalDetails;
   previewAssessment = currentAssessment;
   document.documentElement.dataset.theme = 'light';
   document.body.classList.add('mobile-actions-hidden');
@@ -710,6 +714,9 @@ function openSharedAssessment(currentAssessment) {
   $('#preview').classList.remove('active');
   $('#fillScreen').classList.remove('active');
   $('#sharedProjectTitle').textContent = state.title;
+  $('#sharedViewLabel').textContent = complete ? 'Gedeelde beoordeling' : 'Gedeelde rubric';
+  $('#sharedSummary').hidden = !showSummary;
+  $('#sharedLiveResult').hidden = !complete && answered === 0;
   $('#sharedStudentName').textContent = currentAssessment.student || '-';
   $('#sharedTeacherName').textContent = currentAssessment.teacher || '-';
   const comment = String(currentAssessment.comment || '').trim();
@@ -729,10 +736,10 @@ function openSharedAssessment(currentAssessment) {
   </article>`).join('');
   const max = maxPoints(valid), total = assessmentScore(valid, currentAssessment);
   $('#sharedTotal').textContent = `${total}/${max}`;
-  $('#sharedGrade').textContent = isAssessmentComplete(currentAssessment, valid) ? gradeFor(total, max).toFixed(1).replace('.', ',') : '-';
+  $('#sharedGrade').textContent = complete ? gradeFor(total, max).toFixed(1).replace('.', ',') : '-';
   $('#sharedAssessmentScreen').classList.add('active');
   $('#sharedAssessmentScreen').setAttribute('aria-hidden', 'false');
-  document.title = `${state.title || 'Rubric'} – Gedeelde beoordeling`;
+  document.title = `${state.title || 'Rubric'} – ${complete ? 'Gedeelde beoordeling' : 'Gedeelde rubric'}`;
   window.scrollTo(0, 0);
 }
 
@@ -824,10 +831,10 @@ async function gzipDecode(value) {
   return new Response(stream).text();
 }
 
-async function makeShareLink(includeAssessment) {
+async function makeShareLink(includeAssessment, allowIncomplete = false) {
   try {
-    if (includeAssessment && !assessment.student.trim()) { showToast('Vul eerst de voornaam van de leerling in.'); return; }
-    if (includeAssessment && !isAssessmentComplete(assessment)) { showToast('Vul eerst alle criteria voor deze leerling in.'); return; }
+    if (includeAssessment && !allowIncomplete && !assessment.student.trim()) { showToast('Vul eerst de voornaam van de leerling in.'); return; }
+    if (includeAssessment && !allowIncomplete && !isAssessmentComplete(assessment)) { showToast('Vul eerst alle criteria voor deze leerling in.'); return; }
     const sharedState = {version:state.version,title:state.title,levelNames:state.levelNames,criteria:state.criteria};
     const payload = {v:1,r:sharedState,...(includeAssessment ? {a:assessment} : {})};
     const encoded = await gzipEncode(JSON.stringify(payload));
@@ -836,6 +843,16 @@ async function makeShareLink(includeAssessment) {
     showToast(`${includeAssessment ? 'Deellink voor leerling' : 'Deellink naar rubric'} gekopieerd (${url.length} tekens).`);
   } catch (error) { console.error(error); showToast('Deellink maken is niet gelukt.'); }
 }
+
+function requestStudentShareLink() {
+  if (isAssessmentComplete(assessment)) {
+    makeShareLink(true);
+    return;
+  }
+  $('#incompleteShareDialog').showModal();
+}
+
+function closeIncompleteShareDialog() { $('#incompleteShareDialog').close(); }
 
 async function loadSharedLink() {
   const match = location.hash.match(/^#rubric=v1\.([A-Za-z0-9_-]+)$/); if (!match) return;
@@ -940,7 +957,13 @@ $('#fillHelpButton').addEventListener('click', openHelp);
 $('#fillThemeToggle').addEventListener('click', toggleTheme);
 $('#fillImportButton').addEventListener('click', () => $('#importFile').click());
 $('#fillExportButton').addEventListener('click', openRubricExportDialog);
-$('#shareFilledButton').addEventListener('click', () => makeShareLink(true));
+$('#shareFilledButton').addEventListener('click', requestStudentShareLink);
+$('#cancelIncompleteShare').addEventListener('click', closeIncompleteShareDialog);
+$('#incompleteShareDialog').addEventListener('cancel', closeIncompleteShareDialog);
+$('#confirmIncompleteShare').addEventListener('click', () => {
+  closeIncompleteShareDialog();
+  makeShareLink(true, true);
+});
 $('#addStudentButton').addEventListener('click', addStudentAssessment);
 $('#removeStudentButton').addEventListener('click', () => removeStudentAssessment(assessment.id));
 $('#previousStudentButton').addEventListener('click', () => stepStudentAssessment(-1));
