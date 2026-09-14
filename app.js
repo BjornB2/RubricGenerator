@@ -774,8 +774,19 @@ function closeFill() {
   $('#editor').style.display = ''; $('.app-header').style.display = ''; document.body.classList.remove('mobile-actions-hidden'); document.title = 'OnlineRubric';
 }
 
+function sortAssessmentsByStudentName() {
+  assessmentBook.assessments.sort((left, right) => {
+    const leftName = String(left.student || '').trim();
+    const rightName = String(right.student || '').trim();
+    if (!leftName) return rightName ? 1 : 0;
+    if (!rightName) return -1;
+    return leftName.localeCompare(rightName, 'nl-NL', {sensitivity:'base',numeric:true});
+  });
+}
+
 function renderFill() {
   const valid = validCriteria();
+  sortAssessmentsByStudentName();
   const activeIndex = assessmentBook.assessments.findIndex(item => item.id === assessment.id);
   $('#studentSelect').innerHTML = assessmentBook.assessments.map((item,index) => {
     const complete = valid.length && valid.every(criterion => Number.isInteger(item.choices?.[criterion.id]));
