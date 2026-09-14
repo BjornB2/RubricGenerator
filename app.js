@@ -23,6 +23,7 @@ let pendingImportReturnToFill = false;
 let pendingMagisterImport = null;
 let helpReturnToFill = false;
 let linkLengthWarningShown = false;
+let studentRenameMode = false;
 let saveTimer;
 const $ = (selector) => document.querySelector(selector);
 const list = $('#criteriaList');
@@ -85,6 +86,7 @@ function saveAssessmentBook() {
 }
 
 function resetAssessmentBook() {
+  studentRenameMode = false;
   const first = blankAssessment(); first.rubricTitle = state.title;
   assessmentBook = {rubricTitle:state.title,className:'',teacherName:'',activeId:first.id,assessments:[first]};
   assessment = first; saveAssessmentBook();
@@ -108,7 +110,7 @@ function restoreAssessmentExport(payload) {
   restored.forEach(item => { item.teacher = teacherName; });
   if (!restored.length) restored.push(blankAssessment(teacherName));
   assessmentBook = {rubricTitle:state.title,className:String(payload.className ?? '').slice(0,60),teacherName,activeId:restored[0].id,assessments:restored};
-  assessment = restored[0]; sharedLinkMode = false;
+  assessment = restored[0]; studentRenameMode = false; sharedLinkMode = false;
   localStorage.setItem(STORAGE_KEY,JSON.stringify(state)); saveAssessmentBook(); renderEditor(); applyTheme();
 }
 
@@ -133,7 +135,7 @@ function restoreStudentList(payload) {
     activeId:restored[0].id,
     assessments:restored
   };
-  assessment = restored[0]; saveAssessmentBook();
+  assessment = restored[0]; studentRenameMode = false; saveAssessmentBook();
   return students.length;
 }
 
@@ -760,7 +762,7 @@ function openFill() {
     assessmentBook = {rubricTitle:state.title,className:'',teacherName,activeId:first.id,assessments:[first]};
     assessment = first;
   }
-  closeMobileMenu(); document.body.classList.add('mobile-actions-hidden');
+  studentRenameMode = false; closeMobileMenu(); document.body.classList.add('mobile-actions-hidden');
   $('#editor').style.display = 'none'; $('.app-header').style.display = 'none'; $('#preview').classList.remove('active');
   $('#fillScreen').classList.add('active'); $('#fillScreen').setAttribute('aria-hidden','false');
   $('#fillProjectTitle').textContent = state.title;
@@ -780,12 +782,12 @@ function renderFill() {
     return `<option value="${escapeHtml(item.id)}" ${item.id === assessment.id ? 'selected' : ''}>${complete ? '✓' : '○'} ${index + 1}. ${escapeHtml(item.student || 'Naam nog invullen')}</option>`;
   }).join('');
   $('#studentCounter').textContent = `Leerling ${activeIndex + 1} van ${assessmentBook.assessments.length}`;
-  $('#previousStudentButton').disabled = activeIndex <= 0;
-  $('#nextStudentButton').disabled = activeIndex >= assessmentBook.assessments.length - 1;
   $('#removeStudentButton').disabled = assessmentBook.assessments.length === 1;
   $('#className').value = assessmentBook.className || '';
   $('#teacherName').value = assessmentBook.teacherName || '';
   $('#studentName').value = assessment.student || '';
+  $('#studentSelectMode').hidden = studentRenameMode;
+  $('#studentEditMode').hidden = !studentRenameMode;
   $('#assessmentComment').value = assessment.comment || '';
   $('#assessmentCommentCount').textContent = `${(assessment.comment || '').length}/160`;
   $('#fillCriteria').innerHTML = valid.map(item => `<article class="fill-row" data-id="${escapeHtml(item.id)}"><div class="fill-row-title">${escapeHtml(item.title || 'Naamloos criterium')}</div>${item.levels.map((text,i) => `<button class="level-choice ${assessment.choices?.[item.id] === i ? 'selected' : ''}" data-level="${i}"><small>${escapeHtml(state.levelNames[i].trim() || `Niveau ${i + 1}`)}</small>${escapeHtml(text || '-')}<b>${i*item.weight}</b></button>`).join('')}</article>`).join('');
@@ -793,6 +795,30 @@ function renderFill() {
   $('#fillProgress').textContent = `${answered}/${valid.length}`; $('#fillTotal').textContent = `${total}/${max}`;
   $('#fillGrade').textContent = answered === valid.length ? gradeFor(total,max).toFixed(1).replace('.',',') : '-';
   saveAssessmentBook();
+}
+
+function beginStudentRename() {
+  studentRenameMode = true;
+  $('#studentName').value = assessment.student || '';
+  $('#studentSelectMode').hidden = true;
+  $('#studentEditMode').hidden = false;
+  $('#studentName').focus();
+  $('#studentName').select();
+}
+
+function cancelStudentRename() {
+  studentRenameMode = false;
+  $('#studentName').value = assessment.student || '';
+  $('#studentEditMode').hidden = true;
+  $('#studentSelectMode').hidden = false;
+  $('#editStudentNameButton').focus();
+}
+
+function saveStudentRename() {
+  assessment.student = $('#studentName').value.trim().slice(0,60);
+  studentRenameMode = false;
+  renderFill();
+  $('#editStudentNameButton').focus();
 }
 
 function openSharedAssessment(currentAssessment) {
@@ -842,18 +868,12 @@ function addStudentAssessment() {
   const next = blankAssessment(assessmentBook.teacherName || '');
   next.rubricTitle = state.title;
   assessmentBook.assessments.push(next); assessmentBook.activeId = next.id; assessment = next;
-  renderFill(); $('#studentName').focus();
+  renderFill(); beginStudentRename();
 }
 
 function selectStudentAssessment(id) {
   const selected = assessmentBook.assessments.find(item => item.id === id); if (!selected) return;
-  assessmentBook.activeId = id; assessment = selected; renderFill();
-}
-
-function stepStudentAssessment(direction) {
-  const index = assessmentBook.assessments.findIndex(item => item.id === assessment.id);
-  const next = assessmentBook.assessments[index + direction]; if (!next) return;
-  selectStudentAssessment(next.id);
+  studentRenameMode = false; assessmentBook.activeId = id; assessment = selected; renderFill();
 }
 
 function removeStudentAssessment(id) {
@@ -861,7 +881,7 @@ function removeStudentAssessment(id) {
   const index = assessmentBook.assessments.findIndex(item => item.id === id); if (index < 0) return;
   assessmentBook.assessments.splice(index,1);
   assessment = assessmentBook.assessments[Math.min(index, assessmentBook.assessments.length - 1)];
-  assessmentBook.activeId = assessment.id; renderFill();
+  studentRenameMode = false; assessmentBook.activeId = assessment.id; renderFill();
 }
 
 async function downloadAllAssessments() {
@@ -1068,9 +1088,14 @@ $('#confirmIncompleteShare').addEventListener('click', () => {
 });
 $('#addStudentButton').addEventListener('click', addStudentAssessment);
 $('#removeStudentButton').addEventListener('click', () => removeStudentAssessment(assessment.id));
-$('#previousStudentButton').addEventListener('click', () => stepStudentAssessment(-1));
-$('#nextStudentButton').addEventListener('click', () => stepStudentAssessment(1));
 $('#studentSelect').addEventListener('change', event => selectStudentAssessment(event.target.value));
+$('#editStudentNameButton').addEventListener('click', beginStudentRename);
+$('#saveStudentNameButton').addEventListener('click', saveStudentRename);
+$('#cancelStudentNameButton').addEventListener('click', cancelStudentRename);
+$('#studentName').addEventListener('keydown', event => {
+  if (event.key === 'Enter') { event.preventDefault(); saveStudentRename(); }
+  if (event.key === 'Escape') { event.preventDefault(); cancelStudentRename(); }
+});
 $('#downloadAllButton').addEventListener('click', downloadAllAssessments);
 $('#filledPdfButton').addEventListener('click', async () => {
   const valid = validCriteria(); if (!assessment.student.trim()) { showToast('Vul eerst de voornaam van de leerling in.'); return; }
@@ -1109,7 +1134,6 @@ document.addEventListener('click', event => {
     if (!menu.contains(event.target) || event.target.closest('.action-menu-panel button')) menu.removeAttribute('open');
   });
 });
-$('#studentName').addEventListener('input', event => { assessment.student=event.target.value; renderFill(); });
 $('#teacherName').addEventListener('input', event => {
   assessmentBook.teacherName = event.target.value.slice(0,80);
   assessmentBook.assessments.forEach(item => { item.teacher = assessmentBook.teacherName; });

@@ -22,7 +22,7 @@
   <meta name="twitter:description" content="Ontwerp duidelijke rubrics, beoordeel leerlingen online en download printklare PDF’s, volledig in je eigen browser.">
   <meta name="twitter:image" content="https://onlinerubric.nl/og.png">
   <title>OnlineRubric</title>
-  <link rel="stylesheet" href="styles.css?v=33">
+  <link rel="stylesheet" href="styles.css?v=34">
 </head>
 <body>
   <header class="app-header no-print">
@@ -240,9 +240,15 @@
     <main class="fill-shell">
       <section class="student-tabbar" aria-label="Beoordeling en leerlingen beheren">
         <div class="student-switcher">
-          <button class="student-step" id="previousStudentButton" aria-label="Vorige leerling">←</button>
-          <label><span id="studentCounter">Leerling 1 van 1</span><select id="studentSelect" aria-label="Kies een leerling"></select></label>
-          <button class="student-step" id="nextStudentButton" aria-label="Volgende leerling">→</button>
+          <div class="student-select-mode" id="studentSelectMode">
+            <label><span id="studentCounter">Leerling 1 van 1</span><select id="studentSelect" aria-label="Kies een leerling"></select></label>
+            <button class="student-edit-button" id="editStudentNameButton" type="button" aria-label="Naam van leerling wijzigen" title="Naam wijzigen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 20 4.5-1 10-10-3.5-3.5-10 10L4 20Z"/><path d="m13.5 6.5 3.5 3.5"/></svg></button>
+          </div>
+          <div class="student-edit-mode" id="studentEditMode" hidden>
+            <label><span>Naam leerling</span><input id="studentName" type="text" maxlength="60" placeholder="Bijvoorbeeld: Sanne" autocomplete="off"></label>
+            <button type="button" id="saveStudentNameButton" aria-label="Naam opslaan" title="Naam opslaan">✓</button>
+            <button type="button" id="cancelStudentNameButton" aria-label="Wijzigen annuleren" title="Annuleren">×</button>
+          </div>
         </div>
         <label class="class-context">
           <span>Klas / cluster <small>voor alle leerlingen</small></span>
@@ -252,17 +258,18 @@
           <span>Docent / code <small>voor alle leerlingen</small></span>
           <input id="teacherName" type="text" maxlength="80" placeholder="Bijvoorbeeld: HEB" autocomplete="off">
         </label>
-        <div class="management-icons student-actions" aria-label="Klas en leerlingen beheren">
-          <button type="button" id="addStudentButton" aria-label="Nieuwe leerling" title="Nieuwe leerling"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="4"/><path d="M2.5 21a6.5 6.5 0 0 1 13 0M19 8v6m-3-3h6"/></svg></button>
-          <button type="button" class="danger" id="removeStudentButton" aria-label="Leerling verwijderen" title="Leerling verwijderen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3m3 0-1 13H7L6 7m4 4v5m4-5v5"/></svg></button>
-          <button type="button" id="downloadAllButton" aria-label="Alle PDF’s downloaden" title="Alle PDF’s downloaden"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 19V6a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v10Z"/><path d="M12 10v7m-3-3 3 3 3-3"/></svg></button>
+        <div class="assessment-side">
+          <div class="management-icons student-actions" aria-label="Klas en leerlingen beheren">
+            <button type="button" id="addStudentButton" aria-label="Nieuwe leerling" title="Nieuwe leerling"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="4"/><path d="M2.5 21a6.5 6.5 0 0 1 13 0M19 8v6m-3-3h6"/></svg></button>
+            <button type="button" class="danger" id="removeStudentButton" aria-label="Leerling verwijderen" title="Leerling verwijderen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3m3 0-1 13H7L6 7m4 4v5m4-5v5"/></svg></button>
+            <button type="button" id="downloadAllButton" aria-label="Alle PDF’s downloaden" title="Alle PDF’s downloaden"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 19V6a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v10Z"/><path d="M12 10v7m-3-3 3 3 3-3"/></svg></button>
+          </div>
+          <div class="live-result"><span>Voortgang <b id="fillProgress">0/0</b></span><span>Totaal <b id="fillTotal">0/0</b></span><strong id="fillGrade">-</strong><small>Cijfer</small></div>
         </div>
-        <label class="field student-name-field">Naam leerling<input id="studentName" type="text" maxlength="60" placeholder="Bijvoorbeeld: Sanne"></label>
         <label class="field assessment-comment-field">Opmerking voor leerling
           <input id="assessmentComment" type="text" maxlength="160" placeholder="Korte, persoonlijke toelichting" aria-describedby="assessmentCommentHelp">
           <span class="assessment-comment-help" id="assessmentCommentHelp">Zichtbaar voor de leerling en opgenomen in de deellink. Houd het kort. <b id="assessmentCommentCount">0/160</b></span>
         </label>
-        <div class="live-result"><span>Voortgang <b id="fillProgress">0/0</b></span><span>Totaal <b id="fillTotal">0/0</b></span><strong id="fillGrade">-</strong><small>Cijfer</small></div>
       </section>
       <div id="fillCriteria" class="fill-criteria"></div>
       <footer class="site-footer"><a href="https://github.com/BjornB2/RubricGenerator" target="_blank" rel="noopener noreferrer">Bekijk OnlineRubric op GitHub</a></footer>
@@ -356,6 +363,6 @@
   <script src="vendor/jspdf.umd.min.js"></script>
   <script src="vendor/jspdf.plugin.autotable.min.js"></script>
   <script src="vendor/jszip.min.js"></script>
-  <script src="app.js?v=37"></script>
+  <script src="app.js?v=38"></script>
 </body>
 </html>
