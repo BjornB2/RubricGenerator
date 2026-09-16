@@ -22,7 +22,7 @@
   <meta name="twitter:description" content="Ontwerp duidelijke rubrics, beoordeel leerlingen online en download printklare PDF’s, volledig in je eigen browser.">
   <meta name="twitter:image" content="https://onlinerubric.nl/og.png">
   <title>OnlineRubric</title>
-  <link rel="stylesheet" href="styles.css?v=46">
+  <link rel="stylesheet" href="styles.css?v=47">
 </head>
 <body>
   <header class="app-header no-print">
@@ -52,13 +52,17 @@
     <button class="mobile-menu-backdrop" type="button" aria-label="Menu sluiten"></button>
     <aside class="mobile-menu-panel" aria-label="Mobiel menu">
       <div class="mobile-menu-head"><strong>Menu</strong><button type="button" id="mobileMenuClose" aria-label="Menu sluiten">×</button></div>
+      <section><h2>Navigatie</h2>
+        <button type="button" id="mobileEditorButton">Bewerken</button>
+        <button type="button" id="mobileMenuFillButton">Invullen</button>
+        <button type="button" id="mobileResultsButton">Resultaten</button>
+      </section>
       <section><h2>Rubric</h2>
         <button type="button" id="mobileNewRubric">Nieuwe rubric</button>
         <button type="button" id="mobileImportRubric">Bestand openen</button>
         <button type="button" id="mobileExportRubric">Bestand opslaan</button>
       </section>
       <section><h2>Weergave</h2>
-        <button type="button" id="mobileResultsButton">Resultaten</button>
         <button type="button" id="mobileThemeToggle" aria-label="Wissel tussen lichte en donkere modus">◐ <span>Donker thema</span></button>
         <button type="button" id="mobileHelpButton">Uitleg</button>
       </section>
@@ -66,9 +70,18 @@
   </div>
 
   <nav class="mobile-bottom-bar no-print" aria-label="Snelle acties">
-    <button type="button" id="mobileFillButton">Invullen</button>
-    <button type="button" id="mobilePreviewButton">PDF-preview</button>
-    <button type="button" id="mobileBottomResultsButton">Resultaten</button>
+    <div class="mobile-bottom-actions mobile-editor-actions">
+      <button type="button" id="mobileNewRubricButton">Nieuwe rubric</button>
+      <button type="button" id="mobilePreviewButton">PDF-preview</button>
+    </div>
+    <div class="mobile-bottom-actions mobile-fill-actions">
+      <button type="button" id="mobileShareFilledButton">Deellink</button>
+      <button type="button" id="mobileFilledPdfButton">Beoordeling als PDF</button>
+    </div>
+    <div class="mobile-bottom-actions mobile-results-actions">
+      <button type="button" id="mobileCsvButton">CSV downloaden</button>
+      <button type="button" id="mobileResultsPdfButton">Resultaten als PDF</button>
+    </div>
   </nav>
 
   <main id="editor" class="editor-shell no-print">
@@ -229,6 +242,7 @@
   <section id="fillScreen" class="fill-screen no-print" aria-hidden="true">
     <div class="fill-toolbar">
       <button class="button button-ghost mobile-view-back" id="mobileCloseFillButton">← Bewerken</button>
+      <button class="mobile-menu-toggle mobile-section-menu-toggle" id="fillMobileMenuToggle" type="button" aria-label="Menu openen" aria-controls="mobileMenu" aria-expanded="false"><span></span><span></span><span></span></button>
       <nav class="primary-tabs fill-primary-tabs" aria-label="Hoofdonderdelen">
         <button type="button" id="fillEditorTab">Bewerken</button>
         <button type="button" class="active" id="fillActiveTab" aria-current="page">Invullen</button>
@@ -293,6 +307,7 @@
   <section id="classOverviewScreen" class="fill-screen class-overview-screen no-print" aria-hidden="true">
     <div class="fill-toolbar class-overview-toolbar">
       <button class="button button-ghost mobile-view-back" id="mobileCloseClassOverviewButton">← Terug</button>
+      <button class="mobile-menu-toggle mobile-section-menu-toggle" id="resultsMobileMenuToggle" type="button" aria-label="Menu openen" aria-controls="mobileMenu" aria-expanded="false"><span></span><span></span><span></span></button>
       <nav class="primary-tabs fill-primary-tabs" aria-label="Hoofdonderdelen">
         <button type="button" id="overviewEditorTab">Bewerken</button>
         <button type="button" id="overviewFillTab">Invullen</button>
@@ -472,6 +487,6 @@
   <script src="vendor/jspdf.umd.min.js"></script>
   <script src="vendor/jspdf.plugin.autotable.min.js"></script>
   <script src="vendor/jszip.min.js"></script>
-  <script src="app.js?v=43"></script>
+  <script src="app.js?v=46"></script>
 </body>
 </html>

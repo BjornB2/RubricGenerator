@@ -26,7 +26,9 @@ let linkLengthWarningShown = false;
 let studentRenameMode = false;
 let pendingShareAssessment = null;
 let classOverviewReturnView = 'editor';
+let mobileMenuOpener = null;
 let saveTimer;
+let toastTimer;
 const $ = (selector) => document.querySelector(selector);
 const list = $('#criteriaList');
 
@@ -544,13 +546,15 @@ function closeHelp() {
   $('#helpScreen').classList.remove('active'); $('#helpScreen').setAttribute('aria-hidden','true');
   if (helpReturnView === 'overview') {
     $('#classOverviewScreen').classList.add('active'); $('#classOverviewScreen').setAttribute('aria-hidden','false');
+    document.body.classList.remove('mobile-actions-hidden'); setMobileView('results');
     document.title = `${state.title || 'Rubric'} – Resultaten`;
   } else if (helpReturnView === 'fill') {
     $('#fillScreen').classList.add('active'); $('#fillScreen').setAttribute('aria-hidden','false');
+    document.body.classList.remove('mobile-actions-hidden'); setMobileView('fill');
     document.title = `${state.title || 'Rubric'} – Online beoordelen`;
   } else {
     $('#editor').style.display = ''; $('.app-header').style.display = '';
-    document.body.classList.remove('mobile-actions-hidden'); document.title = 'OnlineRubric';
+    document.body.classList.remove('mobile-actions-hidden'); setMobileView('editor'); document.title = 'OnlineRubric';
   }
   helpReturnView = 'editor'; window.scrollTo(0,0);
 }
@@ -770,7 +774,7 @@ function openFill() {
     assessmentBook = {rubricTitle:state.title,className:'',teacherName,activeId:first.id,assessments:[first]};
     assessment = first;
   }
-  studentRenameMode = false; closeMobileMenu(); document.body.classList.add('mobile-actions-hidden');
+  studentRenameMode = false; closeMobileMenu(); document.body.classList.remove('mobile-actions-hidden'); setMobileView('fill');
   $('#editor').style.display = 'none'; $('.app-header').style.display = 'none'; $('#preview').classList.remove('active');
   $('#classOverviewScreen').classList.remove('active'); $('#classOverviewScreen').setAttribute('aria-hidden','true');
   $('#fillScreen').classList.add('active'); $('#fillScreen').setAttribute('aria-hidden','false');
@@ -780,7 +784,7 @@ function openFill() {
 function closeFill() {
   $('#fillScreen').classList.remove('active'); $('#fillScreen').setAttribute('aria-hidden','true');
   $('#classOverviewScreen').classList.remove('active'); $('#classOverviewScreen').setAttribute('aria-hidden','true');
-  $('#editor').style.display = ''; $('.app-header').style.display = ''; document.body.classList.remove('mobile-actions-hidden'); document.title = 'OnlineRubric';
+  $('#editor').style.display = ''; $('.app-header').style.display = ''; document.body.classList.remove('mobile-actions-hidden'); setMobileView('editor'); document.title = 'OnlineRubric';
 }
 
 function openClassOverview() {
@@ -790,7 +794,7 @@ function openClassOverview() {
     assessmentBook = {rubricTitle:state.title,className:'',teacherName,activeId:first.id,assessments:[first]}; assessment = first;
   }
   classOverviewReturnView = $('#fillScreen').classList.contains('active') ? 'fill' : 'editor';
-  closeMobileMenu(); saveAssessmentBook(); document.body.classList.add('mobile-actions-hidden');
+  closeMobileMenu(); saveAssessmentBook(); document.body.classList.remove('mobile-actions-hidden'); setMobileView('results');
   $('#editor').style.display = 'none'; $('.app-header').style.display = 'none'; $('#preview').classList.remove('active');
   $('#fillScreen').classList.remove('active'); $('#fillScreen').setAttribute('aria-hidden','true');
   $('#classOverviewScreen').classList.add('active'); $('#classOverviewScreen').setAttribute('aria-hidden','false');
@@ -1244,7 +1248,13 @@ async function loadSharedLink() {
 }
 
 function slug(value) { return String(value).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,''); }
-function showToast(message, duration = 2400) { const toast = $('#toast'); toast.textContent = message; toast.classList.add('show'); setTimeout(() => toast.classList.remove('show'), duration); }
+function showToast(message, duration = 4000) {
+  const toast = $('#toast');
+  clearTimeout(toastTimer);
+  toast.textContent = message;
+  toast.classList.add('show');
+  toastTimer = setTimeout(() => toast.classList.remove('show'), duration);
+}
 function showLinkLengthWarning() {
   if (linkLengthWarningShown || localStorage.getItem(LINK_LENGTH_WARNING_KEY)) return;
   linkLengthWarningShown = true;
@@ -1260,10 +1270,24 @@ function confirmNewRubric() {
   state = defaultState(); sharedLinkMode = false; resetAssessmentBook(); renderEditor(); applyTheme(); scheduleSave();
 }
 
+function setMobileView(view) {
+  document.body.classList.toggle('mobile-fill-active', view === 'fill');
+  document.body.classList.toggle('mobile-results-active', view === 'results');
+  [
+    [$('#mobileEditorButton'), 'editor'],
+    [$('#mobileMenuFillButton'), 'fill'],
+    [$('#mobileResultsButton'), 'results']
+  ].forEach(([button, buttonView]) => {
+    if (buttonView === view) button.setAttribute('aria-current','page');
+    else button.removeAttribute('aria-current');
+  });
+}
+
 function openMobileMenu() {
   const menu = $('#mobileMenu');
+  mobileMenuOpener = document.activeElement?.classList?.contains('mobile-menu-toggle') ? document.activeElement : null;
   menu.hidden = false; document.body.classList.add('mobile-menu-open');
-  $('#mobileMenuToggle').setAttribute('aria-expanded','true');
+  document.querySelectorAll('.mobile-menu-toggle').forEach(button => button.setAttribute('aria-expanded', button === mobileMenuOpener ? 'true' : 'false'));
   requestAnimationFrame(() => $('#mobileMenuClose').focus());
 }
 
@@ -1271,7 +1295,7 @@ function closeMobileMenu() {
   const menu = $('#mobileMenu');
   if (!menu || menu.hidden) return;
   menu.hidden = true; document.body.classList.remove('mobile-menu-open');
-  $('#mobileMenuToggle').setAttribute('aria-expanded','false');
+  document.querySelectorAll('.mobile-menu-toggle').forEach(button => button.setAttribute('aria-expanded','false'));
 }
 
 function toggleTheme() {
@@ -1399,24 +1423,31 @@ $('#webGradeListBody').addEventListener('click', event => {
 $('#sharedPdfButton').addEventListener('click', downloadPreviewPdf);
 
 $('#mobileMenuToggle').addEventListener('click', openMobileMenu);
+$('#fillMobileMenuToggle').addEventListener('click', openMobileMenu);
+$('#resultsMobileMenuToggle').addEventListener('click', openMobileMenu);
 $('#mobileMenuClose').addEventListener('click', closeMobileMenu);
 $('.mobile-menu-backdrop').addEventListener('click', closeMobileMenu);
-$('#mobileNewRubric').addEventListener('click', () => { closeMobileMenu(); startNewRubric(); });
+$('#mobileEditorButton').addEventListener('click', () => { closeMobileMenu(); closeFill(); });
+$('#mobileMenuFillButton').addEventListener('click', () => { closeMobileMenu(); openFill(); });
+$('#mobileNewRubric').addEventListener('click', () => { closeMobileMenu(); closeFill(); startNewRubric(); });
 $('#mobileImportRubric').addEventListener('click', () => { closeMobileMenu(); $('#importFile').click(); });
 $('#mobileExportRubric').addEventListener('click', () => { closeMobileMenu(); openRubricExportDialog(); });
-$('#mobileResultsButton').addEventListener('click', openClassOverview);
+$('#mobileResultsButton').addEventListener('click', () => { closeMobileMenu(); openClassOverview(); });
 $('#mobileThemeToggle').addEventListener('click', () => { toggleTheme(); closeMobileMenu(); });
 $('#mobileHelpButton').addEventListener('click', () => { closeMobileMenu(); openHelp(); });
-$('#mobileFillButton').addEventListener('click', openFill);
+$('#mobileNewRubricButton').addEventListener('click', startNewRubric);
 $('#mobilePreviewButton').addEventListener('click', () => openPreview());
-$('#mobileBottomResultsButton').addEventListener('click', openClassOverview);
+$('#mobileShareFilledButton').addEventListener('click', () => requestStudentShareLink());
+$('#mobileFilledPdfButton').addEventListener('click', () => downloadSingleAssessmentPdf(assessment,true));
+$('#mobileCsvButton').addEventListener('click', downloadGradeListCsv);
+$('#mobileResultsPdfButton').addEventListener('click', openResultsPdfDialog);
 $('#dismissLinkLengthWarning').addEventListener('click', () => {
   if ($('#hideLinkLengthWarning').checked) localStorage.setItem(LINK_LENGTH_WARNING_KEY, 'hidden');
   $('#linkLengthWarning').hidden = true;
 });
 
 document.addEventListener('keydown', event => {
-  if (event.key === 'Escape' && !$('#mobileMenu').hidden) { closeMobileMenu(); $('#mobileMenuToggle').focus(); }
+  if (event.key === 'Escape' && !$('#mobileMenu').hidden) { closeMobileMenu(); (mobileMenuOpener || $('#mobileMenuToggle')).focus(); }
 });
 
 document.addEventListener('click', event => {
@@ -1441,5 +1472,6 @@ $('#fillCriteria').addEventListener('click', event => {
 });
 
 applyTheme();
+setMobileView('editor');
 renderEditor();
 loadSharedLink();
