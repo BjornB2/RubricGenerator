@@ -562,7 +562,8 @@ function applyTheme() {
 const SAVE_FILE_TYPES = {
   rubric: [{description:'OnlineRubric-bestand',accept:{'application/octet-stream':['.rubric']}}],
   pdf: [{description:'PDF-document',accept:{'application/pdf':['.pdf']}}],
-  zip: [{description:'ZIP-archief',accept:{'application/zip':['.zip']}}]
+  zip: [{description:'ZIP-archief',accept:{'application/zip':['.zip']}}],
+  csv: [{description:'CSV-bestand',accept:{'text/csv':['.csv']}}]
 };
 
 async function chooseSaveTarget(suggestedName, types) {
@@ -895,29 +896,133 @@ function removeStudentAssessment(id) {
   studentRenameMode = false; assessmentBook.activeId = assessment.id; renderFill();
 }
 
-async function downloadAllAssessments() {
-  const valid = validCriteria();
-  const named = assessmentBook.assessments.filter(item => item.student.trim());
+function namedAssessments() {
+  return assessmentBook.assessments.filter(item => item.student.trim()).slice().sort((left,right) => left.student.localeCompare(right.student,'nl-NL',{sensitivity:'base',numeric:true}));
+}
+
+function openAssessmentDownloadDialog() {
+  const valid = validCriteria(), named = namedAssessments();
   const completed = named.filter(item => isAssessmentComplete(item,valid));
-  const skipped = named.length - completed.length;
-  if (!completed.length) { showToast('Rond eerst minimaal één beoordeling volledig af.'); return; }
+  $('#completedAssessmentDownloadCount').textContent = `(${completed.length})`;
+  $('#allAssessmentDownloadCount').textContent = `(${named.length})`;
+  $('#gradeListPdfCount').textContent = `(${named.length} leerling${named.length === 1 ? '' : 'en'})`;
+  $('#gradeListCsvCount').textContent = `(${named.length} leerling${named.length === 1 ? '' : 'en'})`;
+  $('#downloadCompletedAssessments').disabled = completed.length === 0;
+  $('#downloadEveryAssessment').disabled = named.length === 0;
+  $('#downloadGradeListPdf').disabled = named.length === 0;
+  $('#downloadGradeListCsv').disabled = named.length === 0;
+  $('#assessmentDownloadDialog').showModal();
+}
+
+function closeAssessmentDownloadDialog() {
+  $('#assessmentDownloadDialog').close();
+}
+
+async function downloadAssessmentPdfs(includeIncomplete) {
+  const valid = validCriteria(), named = namedAssessments();
+  const completed = named.filter(item => isAssessmentComplete(item,valid));
+  const selected = includeIncomplete ? named : completed;
+  if (!selected.length) { showToast(includeIncomplete ? 'Vul eerst minimaal één leerlingnaam in.' : 'Rond eerst minimaal één beoordeling volledig af.'); return; }
   const folderName = assessmentFileBase();
-  const target = await chooseSaveTarget(`${folderName} - ingevulde rubrics.zip`,SAVE_FILE_TYPES.zip);
+  const suffix = includeIncomplete ? 'alle leerling-PDF’s' : 'voltooide leerling-PDF’s';
+  const target = await chooseSaveTarget(`${folderName} - ${suffix}.zip`,SAVE_FILE_TYPES.zip);
   if (!target) return;
   const button = $('#downloadAllButton');
   button.disabled = true; button.setAttribute('aria-busy','true');
   try {
     const zip = new JSZip(), folder = zip.folder(folderName);
-    completed.forEach((item,index) => {
+    selected.forEach((item,index) => {
       const order = String(index + 1).padStart(2,'0');
       folder.file(`${order} - ${safeName(item.student) || `Leerling ${index + 1}`}.pdf`, buildPdf(valid,maxPoints(valid),item).output('arraybuffer'));
     });
     folder.file(`${folderName} - beoordelingen.rubric`, JSON.stringify(assessmentExportData(), null, 2));
     const blob = await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}});
     const result = await saveBlob(blob,target);
-    showSaveToast(result,`${completed.length} PDF’s en het klasbestand opgeslagen${skipped ? `; ${skipped} onvolledige beoordeling${skipped === 1 ? '' : 'en'} overgeslagen` : ''}.`);
+    showSaveToast(result,`${selected.length} leerling-PDF${selected.length === 1 ? '' : '’s'} en het klasbestand opgeslagen.`);
   } catch (error) { console.error(error); showToast('De gezamenlijke download is niet gelukt.'); }
   finally { button.disabled = false; button.removeAttribute('aria-busy'); }
+}
+
+function gradeListData() {
+  const valid = validCriteria(), max = maxPoints(valid);
+  const rows = namedAssessments().map(item => {
+    const total = assessmentScore(valid,item), complete = isAssessmentComplete(item,valid);
+    return {student:item.student,total,max,complete,grade:complete ? gradeFor(total,max) : null,comment:String(item.comment || '').trim()};
+  });
+  const completed = rows.filter(item => item.complete);
+  const sufficient = completed.filter(item => item.grade >= 5.5).length;
+  return {
+    rows,completedCount:completed.length,
+    average:completed.length ? completed.reduce((sum,item) => sum + item.grade,0) / completed.length : null,
+    sufficient,insufficient:completed.length - sufficient
+  };
+}
+
+function gradeListFileBase() {
+  const className = safeName(assessmentBook.className), title = safeName(state.title) || 'Rubric';
+  return ['Cijferlijst',className,title].filter(Boolean).join(' - ');
+}
+
+function buildGradeListPdf() {
+  const { jsPDF } = window.jspdf, data = gradeListData();
+  const pdf = new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
+  const navy = [18,61,85], orange = [235,113,70], sky = [220,235,240], muted = [97,114,123];
+  pdf.setFont('helvetica','bold'); pdf.setTextColor(...orange); pdf.setFontSize(7); pdf.text('CIJFERLIJST',14,13);
+  pdf.setTextColor(...navy); pdf.setFontSize(17); pdf.text(state.title.trim() || 'Rubric',14,21);
+  pdf.setFont('helvetica','normal'); pdf.setFontSize(8); pdf.setTextColor(...muted);
+  const context = [assessmentBook.className && `Klas: ${assessmentBook.className}`,assessmentBook.teacherName && `Docent: ${assessmentBook.teacherName}`].filter(Boolean).join('   ·   ');
+  if (context) pdf.text(context,14,27);
+  const stats = [
+    ['Beoordeeld',`${data.completedCount} van ${data.rows.length}`],
+    ['Gemiddeld cijfer',data.average === null ? '-' : data.average.toFixed(1).replace('.',',')],
+    ['Voldoende',data.completedCount ? `${data.sufficient} · ${Math.round(data.sufficient/data.completedCount*100)}%` : '0'],
+    ['Onvoldoende',data.completedCount ? `${data.insufficient} · ${Math.round(data.insufficient/data.completedCount*100)}%` : '0']
+  ];
+  const statY = 32, statGap = 4, statWidth = (269 - statGap * 3) / 4;
+  stats.forEach(([label,value],index) => {
+    const x = 14 + index * (statWidth + statGap);
+    pdf.setFillColor(...sky); pdf.roundedRect(x,statY,statWidth,15,1.5,1.5,'F');
+    pdf.setFont('helvetica','normal'); pdf.setFontSize(6.5); pdf.setTextColor(...muted); pdf.text(label,x+4,statY+5);
+    pdf.setFont('helvetica','bold'); pdf.setFontSize(10); pdf.setTextColor(...navy); pdf.text(value,x+4,statY+11.5);
+  });
+  pdf.autoTable({
+    startY:52,head:[['Leerling','Punten','Cijfer','Opmerking']],
+    body:data.rows.map(item => [item.student,`${item.total}/${item.max}`,item.grade === null ? '' : item.grade.toFixed(1).replace('.',','),item.comment]),
+    margin:{left:14,right:14,bottom:12},
+    styles:{font:'helvetica',fontSize:8,cellPadding:2.5,valign:'middle',lineColor:[203,211,214],lineWidth:.2,textColor:[24,48,62],overflow:'hidden'},
+    headStyles:{fillColor:navy,textColor:255,fontStyle:'bold'},
+    alternateRowStyles:{fillColor:[241,245,246]},
+    columnStyles:{0:{cellWidth:48,fontStyle:'bold'},1:{cellWidth:25,halign:'center'},2:{cellWidth:22,halign:'center',fontStyle:'bold'},3:{cellWidth:174}},
+    didParseCell(cellData) {
+      if (cellData.section !== 'body' || cellData.column.index !== 3 || !cellData.cell.raw) return;
+      pdf.setFont('helvetica','normal'); pdf.setFontSize(8);
+      const available = 169, textWidth = pdf.getTextWidth(String(cellData.cell.raw));
+      if (textWidth > available) cellData.cell.styles.fontSize = Math.max(3.2,8 * available / textWidth);
+    }
+  });
+  pdf.setProperties({title:`Cijferlijst ${state.title || 'Rubric'}`,subject:'Cijferlijst',creator:'OnlineRubric'});
+  return pdf;
+}
+
+async function downloadGradeListPdf() {
+  const target = await chooseSaveTarget(`${gradeListFileBase()}.pdf`,SAVE_FILE_TYPES.pdf);
+  if (!target) return;
+  try { showSaveToast(await saveBlob(buildGradeListPdf().output('blob'),target),'Cijferlijst als PDF opgeslagen.'); }
+  catch (error) { console.error(error); showToast('De cijferlijst kon niet worden opgeslagen.'); }
+}
+
+function csvCell(value) {
+  return `"${String(value ?? '').replace(/"/g,'""')}"`;
+}
+
+async function downloadGradeListCsv() {
+  const data = gradeListData();
+  const lines = [['Leerling','Punten','Cijfer','Opmerking'],...data.rows.map(item => [item.student,`${item.total}/${item.max}`,item.grade === null ? '' : item.grade.toFixed(1).replace('.',','),item.comment])];
+  const blob = new Blob([`\uFEFF${lines.map(row => row.map(csvCell).join(';')).join('\r\n')}`],{type:'text/csv;charset=utf-8'});
+  const target = await chooseSaveTarget(`${gradeListFileBase()}.csv`,SAVE_FILE_TYPES.csv);
+  if (!target) return;
+  try { showSaveToast(await saveBlob(blob,target),'Cijferlijst als CSV opgeslagen.'); }
+  catch (error) { console.error(error); showToast('De cijferlijst kon niet worden opgeslagen.'); }
 }
 
 function assessmentExportData() {
@@ -1107,7 +1212,13 @@ $('#studentName').addEventListener('keydown', event => {
   if (event.key === 'Enter') { event.preventDefault(); saveStudentRename(); }
   if (event.key === 'Escape') { event.preventDefault(); cancelStudentRename(); }
 });
-$('#downloadAllButton').addEventListener('click', downloadAllAssessments);
+$('#downloadAllButton').addEventListener('click', openAssessmentDownloadDialog);
+$('#cancelAssessmentDownload').addEventListener('click', closeAssessmentDownloadDialog);
+$('#assessmentDownloadDialog').addEventListener('cancel', closeAssessmentDownloadDialog);
+$('#downloadCompletedAssessments').addEventListener('click', () => { closeAssessmentDownloadDialog(); downloadAssessmentPdfs(false); });
+$('#downloadEveryAssessment').addEventListener('click', () => { closeAssessmentDownloadDialog(); downloadAssessmentPdfs(true); });
+$('#downloadGradeListPdf').addEventListener('click', () => { closeAssessmentDownloadDialog(); downloadGradeListPdf(); });
+$('#downloadGradeListCsv').addEventListener('click', () => { closeAssessmentDownloadDialog(); downloadGradeListCsv(); });
 $('#filledPdfButton').addEventListener('click', async () => {
   const valid = validCriteria(); if (!assessment.student.trim()) { showToast('Vul eerst de voornaam van de leerling in.'); return; }
   if (!isAssessmentComplete(assessment,valid)) { showToast('Vul eerst alle criteria voor deze leerling in.'); return; }
