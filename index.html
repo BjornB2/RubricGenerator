@@ -22,7 +22,7 @@
   <meta name="twitter:description" content="Ontwerp duidelijke rubrics, beoordeel leerlingen online en download printklare PDF’s, volledig in je eigen browser.">
   <meta name="twitter:image" content="https://onlinerubric.nl/og.png">
   <title>OnlineRubric</title>
-  <link rel="stylesheet" href="styles.css?v=39">
+  <link rel="stylesheet" href="styles.css?v=46">
 </head>
 <body>
   <header class="app-header no-print">
@@ -36,11 +36,11 @@
     </nav>
     <button class="mobile-menu-toggle" id="mobileMenuToggle" type="button" aria-label="Menu openen" aria-controls="mobileMenu" aria-expanded="false"><span></span><span></span><span></span></button>
     <nav class="header-actions" aria-label="Bestandsacties">
+      <button class="button button-dark" id="newRubric">Nieuwe rubric</button>
       <button class="button button-accent" id="previewButton">PDF-preview</button>
       <button class="button button-ghost icon-control" id="helpButton" aria-label="Uitleg openen" title="Uitleg"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.8 9a2.4 2.4 0 1 1 3.4 2.2c-.8.4-1.2 1-1.2 1.8M12 17h.01"/></svg></button>
       <button class="button button-ghost icon-control theme-toggle" id="themeToggle" aria-label="Donkere modus inschakelen" title="Donkere modus inschakelen"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18Z" class="theme-half"/></svg></button>
       <div class="management-icons header-management-icons" aria-label="Rubric en bestanden beheren">
-        <button type="button" id="newRubric" aria-label="Nieuwe rubric" title="Nieuwe rubric"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M12 12v6m-3-3h6"/></svg></button>
         <button type="button" id="importButton" aria-label="Bestand openen" title="Bestand openen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 19V6a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v2"/><path d="M3 19h15l3-8H6Z"/></svg></button>
         <button type="button" id="exportButton" aria-label="Bestand opslaan" title="Bestand opslaan"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h12l3 3v15H4V4a1 1 0 0 1 1-1Z"/><path d="M8 3v6h8V3M8 21v-7h8v7"/></svg></button>
       </div>
@@ -155,7 +155,7 @@
         <article><h2>Delen met een leerling</h2><p><strong>Deellink voor leerling</strong> maakt een alleen-lezen weergave. Zo kun je vooraf de lege rubric delen en later het resultaat met de eventuele toelichting. Bij een onvolledige rubric volgt eerst een waarschuwing. De leerling krijgt geen toegang tot de editor of andere leerlingen.</p></article>
         <article><h2>Bewaren en openen</h2><p>Je werk wordt automatisch in deze browser bewaard. Met <strong>Bestand opslaan</strong> en <strong>Bestand openen</strong> kun je een rubric, een leerlinglijst of alles inclusief beoordelingen bewaren en later weer gebruiken. Een losse leerlinglijst vervangt de huidige leerlinglijst, maar niet de openstaande rubric.</p></article>
         <article><h2>Hoe ontstaat het cijfer?</h2><p>Als je bij ieder criterium het middelste niveau kiest, is het eindcijfer precies een 6,0. Alles op het laagste niveau geeft een 1,0 en alles op het hoogste niveau een 10. Tussenliggende resultaten worden afgerond op halve cijfers.</p></article>
-        <article><h2>PDF als extra mogelijkheid</h2><p>Gebruik de <strong>PDF-preview</strong> wanneer je een rubric wilt printen of een beoordeling als document wilt bewaren. Tijdens het beoordelen kun je leerling-PDF’s en een cijferlijst van de hele klas downloaden.</p></article>
+        <article><h2>PDF als extra mogelijkheid</h2><p>Gebruik de <strong>PDF-preview</strong> wanneer je een rubric wilt printen of een beoordeling als document wilt bewaren. Bij <strong>Invullen</strong> download je leerling-PDF’s. Onder <strong>Resultaten</strong> download je de cijferlijst, de klassikale statistieken of beide samen.</p></article>
         <article><h2>Waarom zijn deellinks zo lang?</h2><p>Er wordt niets in een database of op een server opgeslagen. Daarom zit de volledige rubric, en bij een leerlinglink ook de ingevulde beoordeling, samengeperst in de link zelf. Meer criteria en langere beschrijvingen maken de link langer. Deel een ingevulde link alleen met de bedoelde leerling.</p></article>
         <article><h2>Praktische tip</h2><p>Houd criteria, niveaus en toelichtingen kort en concreet. Zo blijft de beoordeling prettig leesbaar en de deellink zo compact mogelijk.</p></article>
       </section>
@@ -234,10 +234,10 @@
         <button type="button" class="active" id="fillActiveTab" aria-current="page">Invullen</button>
         <button type="button" id="fillResultsTab">Resultaten</button>
       </nav>
-      <div class="fill-toolbar-title"><strong id="fillProjectTitle"></strong><small>Online beoordeling</small></div>
+      <div class="fill-toolbar-title"><strong>OnlineRubric</strong><small>ontwerpen, beoordelen en delen</small></div>
       <div class="fill-toolbar-actions">
         <button class="button button-dark button-with-icon" id="shareFilledButton"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 10.5 6.8-4M8.6 13.5l6.8 4"/></svg><span>Deellink voor leerling</span></button>
-        <button class="button button-accent" id="filledPdfButton">PDF downloaden</button>
+        <button class="button button-accent" id="filledPdfButton">Beoordeling als PDF</button>
         <button class="button button-ghost icon-control mobile-overview-control" id="classOverviewButton" aria-label="Klasoverzicht openen" title="Klasoverzicht"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10m6 10V4m6 16v-7m4 7H2"/></svg></button>
         <button class="button button-ghost icon-control" id="fillHelpButton" aria-label="Uitleg openen" title="Uitleg"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.8 9a2.4 2.4 0 1 1 3.4 2.2c-.8.4-1.2 1-1.2 1.8M12 17h.01"/></svg></button>
         <button class="button button-ghost icon-control theme-toggle" id="fillThemeToggle" aria-label="Donkere modus inschakelen" title="Donkere modus inschakelen"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18Z" class="theme-half"/></svg></button>
@@ -248,6 +248,10 @@
       </div>
     </div>
     <main class="fill-shell">
+      <header class="workspace-heading">
+        <p class="eyebrow">Online beoordelen</p>
+        <h1 id="fillPageTitle"></h1>
+      </header>
       <section class="student-tabbar" aria-label="Beoordeling en leerlingen beheren">
         <div class="student-switcher">
           <div class="student-select-mode" id="studentSelectMode">
@@ -294,13 +298,23 @@
         <button type="button" id="overviewFillTab">Invullen</button>
         <button type="button" class="active" id="overviewResultsTab" aria-current="page">Resultaten</button>
       </nav>
-      <div class="fill-toolbar-title"><strong id="classOverviewTitle"></strong><small>Cijferlijst en klasanalyse</small></div>
+      <div class="fill-toolbar-title"><strong>OnlineRubric</strong><small>ontwerpen, beoordelen en delen</small></div>
       <div class="fill-toolbar-actions">
-        <button class="button button-ghost" id="classOverviewCsvButton">CSV downloaden</button>
-        <button class="button button-accent" id="classOverviewPdfButton">PDF downloaden</button>
+        <button class="button button-dark" id="classOverviewCsvButton">CSV downloaden</button>
+        <button class="button button-accent" id="classOverviewPdfButton">Resultaten als PDF</button>
+        <button class="button button-ghost icon-control overview-common-action" id="overviewHelpButton" aria-label="Uitleg openen" title="Uitleg"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.8 9a2.4 2.4 0 1 1 3.4 2.2c-.8.4-1.2 1-1.2 1.8M12 17h.01"/></svg></button>
+        <button class="button button-ghost icon-control theme-toggle overview-common-action" id="overviewThemeToggle" aria-label="Donkere modus inschakelen" title="Donkere modus inschakelen"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18Z" class="theme-half"/></svg></button>
+        <div class="management-icons fill-file-actions overview-common-action" aria-label="Bestand openen en opslaan">
+          <button type="button" id="overviewImportButton" aria-label="Bestand openen" title="Bestand openen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 19V6a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v2"/><path d="M3 19h15l3-8H6Z"/></svg></button>
+          <button type="button" id="overviewExportButton" aria-label="Bestand opslaan" title="Bestand opslaan"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h12l3 3v15H4V4a1 1 0 0 1 1-1Z"/><path d="M8 3v6h8V3M8 21v-7h8v7"/></svg></button>
+        </div>
       </div>
     </div>
     <main class="fill-shell class-overview-shell">
+      <header class="workspace-heading">
+        <p class="eyebrow">Resultaten</p>
+        <h1 id="resultsPageTitle"></h1>
+      </header>
       <section class="overview-stats" aria-label="Statistieken">
         <article><span>Beoordeeld</span><strong id="overviewCompleted">0 van 0</strong></article>
         <article><span>Gemiddeld</span><strong id="overviewAverage">-</strong></article>
@@ -407,17 +421,41 @@
     </div>
   </dialog>
 
+  <dialog class="import-dialog" id="newRubricDialog" aria-labelledby="newRubricTitle">
+    <div class="import-dialog-content">
+      <p class="eyebrow">Opnieuw beginnen</p>
+      <h2 id="newRubricTitle">Een nieuwe rubric maken?</h2>
+      <p>Je huidige rubric wordt vervangen. Sla hem eerst op als je hem later nog wilt gebruiken.</p>
+      <div class="import-dialog-actions confirmation-dialog-actions">
+        <button class="button button-ghost" id="cancelNewRubric">Annuleren</button>
+        <button class="button button-accent" id="confirmNewRubric">Nieuwe rubric maken</button>
+      </div>
+    </div>
+  </dialog>
+
   <dialog class="import-dialog" id="assessmentDownloadDialog" aria-labelledby="assessmentDownloadTitle">
     <div class="import-dialog-content">
       <p class="eyebrow">Downloaden</p>
       <h2 id="assessmentDownloadTitle">Wat wil je downloaden?</h2>
-      <p>Kies leerling-PDF’s of download een alfabetische cijferlijst van de hele klas.</p>
+      <p>Kies welke leerling-PDF’s je wilt downloaden.</p>
       <div class="import-dialog-actions download-dialog-actions">
         <button class="button button-ghost" id="cancelAssessmentDownload">Annuleren</button>
         <button class="button button-dark" id="downloadCompletedAssessments">Voltooide leerling-PDF’s <span id="completedAssessmentDownloadCount">(0)</span></button>
-        <button class="button button-dark" id="downloadEveryAssessment">Alle leerling-PDF’s <span id="allAssessmentDownloadCount">(0)</span></button>
-        <button class="button button-dark" id="downloadGradeListPdf">Cijferlijst als PDF <span id="gradeListPdfCount">(0 leerlingen)</span></button>
-        <button class="button button-accent" id="downloadGradeListCsv">Cijferlijst als CSV <span id="gradeListCsvCount">(0 leerlingen)</span></button>
+        <button class="button button-accent" id="downloadEveryAssessment">Alle leerling-PDF’s <span id="allAssessmentDownloadCount">(0)</span></button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog class="import-dialog" id="resultsPdfDialog" aria-labelledby="resultsPdfTitle">
+    <div class="import-dialog-content">
+      <p class="eyebrow">Resultaten als PDF</p>
+      <h2 id="resultsPdfTitle">Wat wil je downloaden?</h2>
+      <p>De statistieken bevatten geen leerlingnamen en zijn geschikt om klassikaal te tonen.</p>
+      <div class="import-dialog-actions results-pdf-dialog-actions">
+        <button class="button button-ghost" id="cancelResultsPdf">Annuleren</button>
+        <button class="button button-dark" id="downloadResultsListOnly">Alleen cijferlijst</button>
+        <button class="button button-dark" id="downloadResultsWithStats">Cijferlijst + statistieken</button>
+        <button class="button button-accent" id="downloadResultsStatsOnly">Alleen statistieken</button>
       </div>
     </div>
   </dialog>
@@ -434,6 +472,6 @@
   <script src="vendor/jspdf.umd.min.js"></script>
   <script src="vendor/jspdf.plugin.autotable.min.js"></script>
   <script src="vendor/jszip.min.js"></script>
-  <script src="app.js?v=40"></script>
+  <script src="app.js?v=43"></script>
 </body>
 </html>

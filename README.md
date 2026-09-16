@@ -42,6 +42,7 @@ Een leerling krijgt via de deellink alleen de eigen, afgeronde beoordeling te zi
 - Eén leerling-PDF, alle voltooide PDF's of alle PDF's als ZIP downloaden
 - Een webgebaseerd klasoverzicht met cijferstatistieken en analyse per criterium
 - Een alfabetische cijferlijst als PDF of CSV downloaden
+- Klassikale statistieken zonder leerlingnamen als aparte PDF downloaden, eventueel gevolgd door de cijferlijst
 - Een liggende A4-preview en printklare PDF genereren
 - Lichte en donkere schermweergave
 - Aangepaste bediening voor kleinere schermen

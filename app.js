@@ -19,9 +19,9 @@ let assessment = activeAssessment();
 let sharedLinkMode = false;
 let previewAssessment = null;
 let pendingAssessmentImport = null;
-let pendingImportReturnToFill = false;
+let pendingImportReturnView = 'editor';
 let pendingMagisterImport = null;
-let helpReturnToFill = false;
+let helpReturnView = 'editor';
 let linkLengthWarningShown = false;
 let studentRenameMode = false;
 let pendingShareAssessment = null;
@@ -171,7 +171,7 @@ function normalizeCsvHeader(value) {
   return String(value || '').replace(/^\uFEFF/, '').trim().toLocaleLowerCase('nl-NL').replace(/[^a-z0-9]/g, '');
 }
 
-function prepareMagisterImport(csvText, returnToFill = false) {
+function prepareMagisterImport(csvText, returnView = 'editor') {
   const rows = parseCsv(csvText);
   if (rows.length < 2) throw new Error('Lege CSV');
   const headers = rows[0].map(normalizeCsvHeader);
@@ -186,7 +186,7 @@ function prepareMagisterImport(csvText, returnToFill = false) {
   })).filter(student => student.firstName).sort((left, right) => left.firstName.localeCompare(right.firstName, 'nl-NL', {sensitivity:'base',numeric:true}));
   if (!students.length) throw new Error('Geen leerlingen');
   const classes = [...new Set(students.map(student => student.className).filter(Boolean))];
-  pendingMagisterImport = {students,className:classes.length === 1 ? classes[0] : '',returnToFill};
+  pendingMagisterImport = {students,className:classes.length === 1 ? classes[0] : '',returnView};
   const classText = classes.length === 1 ? ` voor klas ${classes[0]}` : classes.length > 1 ? ' uit meerdere klassen' : '';
   $('#magisterImportSummary').textContent = `${students.length} leerling${students.length === 1 ? '' : 'en'} gevonden${classText}. Kies hoe de namen worden weergegeven.`;
   $('#magisterImportWarning').hidden = !assessmentBook.assessments.some(assessmentHasContent);
@@ -214,25 +214,26 @@ function formatMagisterNames(students, useFullNames) {
 
 function importMagisterStudents(useFullNames) {
   if (!pendingMagisterImport) return;
-  const {students,className,returnToFill} = pendingMagisterImport;
+  const {students,className,returnView} = pendingMagisterImport;
   const names = formatMagisterNames(students, useFullNames);
   const addedCount = restoreStudentList({type:'rubricbouwer-leerlingen',className,students:names});
   closeMagisterImportDialog();
-  if (returnToFill) renderFill();
+  if (returnView === 'fill') renderFill();
+  if (returnView === 'overview') renderClassOverview();
   showToast(`${addedCount} leerlingen uit Magister geopend.`);
 }
 
 function closeAssessmentImportDialog() {
-  pendingAssessmentImport = null; pendingImportReturnToFill = false; $('#assessmentImportDialog').close();
+  pendingAssessmentImport = null; pendingImportReturnView = 'editor'; $('#assessmentImportDialog').close();
 }
 
-function prepareImport(payload, returnToFill = false) {
+function prepareImport(payload, returnView = 'editor') {
   const isFull = payload?.type === 'rubricbouwer-beoordelingen' && payload?.rubric && Array.isArray(payload.assessments);
   const isStudentList = payload?.type === 'rubricbouwer-leerlingen' && Array.isArray(payload.students);
   const hasRubric = isFull || (!isStudentList && payload && typeof payload === 'object');
   const hasStudentList = isFull || isStudentList;
   if (!hasRubric && !hasStudentList) throw new Error('Ongeldig bestand');
-  pendingAssessmentImport = payload; pendingImportReturnToFill = returnToFill;
+  pendingAssessmentImport = payload; pendingImportReturnView = returnView;
   $('#importRubricOnly').disabled = !hasRubric;
   $('#importStudentListOnly').disabled = !hasStudentList;
   $('#importRubricAndAssessments').disabled = !isFull;
@@ -529,10 +530,11 @@ function closePreview() {
 }
 
 function openHelp() {
-  helpReturnToFill = $('#fillScreen').classList.contains('active');
-  $('#closeHelpButton').textContent = helpReturnToFill ? '← Terug naar invullen' : '← Terug naar editor';
+  helpReturnView = $('#classOverviewScreen').classList.contains('active') ? 'overview' : $('#fillScreen').classList.contains('active') ? 'fill' : 'editor';
+  $('#closeHelpButton').textContent = helpReturnView === 'overview' ? '← Terug naar resultaten' : helpReturnView === 'fill' ? '← Terug naar invullen' : '← Terug naar editor';
   closeMobileMenu(); document.body.classList.add('mobile-actions-hidden');
-  if (helpReturnToFill) { $('#fillScreen').classList.remove('active'); $('#fillScreen').setAttribute('aria-hidden','true'); }
+  $('#fillScreen').classList.remove('active'); $('#fillScreen').setAttribute('aria-hidden','true');
+  $('#classOverviewScreen').classList.remove('active'); $('#classOverviewScreen').setAttribute('aria-hidden','true');
   $('#editor').style.display = 'none'; $('.app-header').style.display = 'none';
   $('#helpScreen').classList.add('active'); $('#helpScreen').setAttribute('aria-hidden','false');
   document.title = 'Uitleg – OnlineRubric'; window.scrollTo(0,0);
@@ -540,20 +542,23 @@ function openHelp() {
 
 function closeHelp() {
   $('#helpScreen').classList.remove('active'); $('#helpScreen').setAttribute('aria-hidden','true');
-  if (helpReturnToFill) {
+  if (helpReturnView === 'overview') {
+    $('#classOverviewScreen').classList.add('active'); $('#classOverviewScreen').setAttribute('aria-hidden','false');
+    document.title = `${state.title || 'Rubric'} – Resultaten`;
+  } else if (helpReturnView === 'fill') {
     $('#fillScreen').classList.add('active'); $('#fillScreen').setAttribute('aria-hidden','false');
     document.title = `${state.title || 'Rubric'} – Online beoordelen`;
   } else {
     $('#editor').style.display = ''; $('.app-header').style.display = '';
     document.body.classList.remove('mobile-actions-hidden'); document.title = 'OnlineRubric';
   }
-  helpReturnToFill = false; window.scrollTo(0,0);
+  helpReturnView = 'editor'; window.scrollTo(0,0);
 }
 
 function applyTheme() {
   document.documentElement.dataset.theme = theme;
   const themeAction = theme === 'dark' ? 'Lichte modus inschakelen' : 'Donkere modus inschakelen';
-  [$('#themeToggle'),$('#fillThemeToggle')].forEach(button => {
+  [$('#themeToggle'),$('#fillThemeToggle'),$('#overviewThemeToggle')].forEach(button => {
     button.setAttribute('aria-label',themeAction); button.title = themeAction;
     button.setAttribute('aria-pressed', theme === 'dark');
   });
@@ -769,7 +774,6 @@ function openFill() {
   $('#editor').style.display = 'none'; $('.app-header').style.display = 'none'; $('#preview').classList.remove('active');
   $('#classOverviewScreen').classList.remove('active'); $('#classOverviewScreen').setAttribute('aria-hidden','true');
   $('#fillScreen').classList.add('active'); $('#fillScreen').setAttribute('aria-hidden','false');
-  $('#fillProjectTitle').textContent = state.title;
   renderFill(); window.scrollTo(0,0);
 }
 
@@ -790,7 +794,6 @@ function openClassOverview() {
   $('#editor').style.display = 'none'; $('.app-header').style.display = 'none'; $('#preview').classList.remove('active');
   $('#fillScreen').classList.remove('active'); $('#fillScreen').setAttribute('aria-hidden','true');
   $('#classOverviewScreen').classList.add('active'); $('#classOverviewScreen').setAttribute('aria-hidden','false');
-  $('#classOverviewTitle').textContent = state.title || 'Rubric';
   renderClassOverview(); document.title = `${state.title || 'Rubric'} – Resultaten`; window.scrollTo(0,0);
 }
 
@@ -811,6 +814,7 @@ function sortAssessmentsByStudentName() {
 
 function renderFill() {
   const valid = validCriteria();
+  $('#fillPageTitle').textContent = state.title || 'Naamloze rubric';
   sortAssessmentsByStudentName();
   const activeIndex = assessmentBook.assessments.findIndex(item => item.id === assessment.id);
   $('#studentSelect').innerHTML = assessmentBook.assessments.map((item,index) => {
@@ -929,18 +933,23 @@ function openAssessmentDownloadDialog() {
   const completed = named.filter(item => isAssessmentComplete(item,valid));
   $('#completedAssessmentDownloadCount').textContent = `(${completed.length})`;
   $('#allAssessmentDownloadCount').textContent = `(${named.length})`;
-  $('#gradeListPdfCount').textContent = `(${named.length} leerling${named.length === 1 ? '' : 'en'})`;
-  $('#gradeListCsvCount').textContent = `(${named.length} leerling${named.length === 1 ? '' : 'en'})`;
   $('#downloadCompletedAssessments').disabled = completed.length === 0;
   $('#downloadEveryAssessment').disabled = named.length === 0;
-  $('#downloadGradeListPdf').disabled = named.length === 0;
-  $('#downloadGradeListCsv').disabled = named.length === 0;
   $('#assessmentDownloadDialog').showModal();
 }
 
 function closeAssessmentDownloadDialog() {
   $('#assessmentDownloadDialog').close();
 }
+
+function openResultsPdfDialog() {
+  const hasStudents = namedAssessments().length > 0;
+  $('#downloadResultsListOnly').disabled = !hasStudents;
+  $('#downloadResultsWithStats').disabled = !hasStudents;
+  $('#resultsPdfDialog').showModal();
+}
+
+function closeResultsPdfDialog() { $('#resultsPdfDialog').close(); }
 
 async function downloadAssessmentPdfs(includeIncomplete) {
   const valid = validCriteria(), named = namedAssessments();
@@ -998,6 +1007,7 @@ function gradeListData() {
 
 function renderClassOverview() {
   const data = gradeListData(), valid = validCriteria(), named = namedAssessments();
+  $('#resultsPageTitle').textContent = state.title || 'Naamloze rubric';
   const percentage = value => data.completedCount ? Math.round(value / data.completedCount * 100) : 0;
   $('#overviewCompleted').textContent = `${data.completedCount} van ${data.rows.length}`;
   $('#overviewAverage').textContent = data.average === null ? '-' : data.average.toFixed(1).replace('.',',');
@@ -1010,7 +1020,8 @@ function renderClassOverview() {
   },new Map());
   const gradeEntries = [...gradeCounts.entries()].sort((left,right) => Number(left[0].replace(',','.')) - Number(right[0].replace(',','.')));
   const largestGradeCount = Math.max(0,...gradeEntries.map(([,count]) => count));
-  $('#gradeDistribution').innerHTML = gradeEntries.length ? gradeEntries.map(([grade,count]) => `<div class="distribution-row"><span>${escapeHtml(grade)}</span><div class="distribution-track"><div class="distribution-bar" style="width:${count/largestGradeCount*100}%"></div></div><b>${count}</b></div>`).join('') : '<p class="overview-empty">Er zijn nog geen volledig beoordeelde leerlingen.</p>';
+  $('#gradeDistribution').innerHTML = gradeEntries.length ? gradeEntries.map(([grade,count]) => `<div class="distribution-row"><span>${escapeHtml(grade)}</span><div class="distribution-track"><div class="distribution-bar" data-width="${count/largestGradeCount*100}"></div></div><b>${count}</b></div>`).join('') : '<p class="overview-empty">Er zijn nog geen volledig beoordeelde leerlingen.</p>';
+  $('#gradeDistribution').querySelectorAll('[data-width]').forEach(bar => { bar.style.width = `${bar.dataset.width}%`; });
 
   $('#criteriaAnalysisLegend').innerHTML = state.levelNames.map((name,index) => `<span><i class="analysis-level-${index}"></i>${escapeHtml(name.trim() || `Niveau ${index + 1}`)}</span>`).join('');
   $('#criteriaAnalysis').innerHTML = valid.length ? valid.map(criterion => {
@@ -1020,10 +1031,11 @@ function renderClassOverview() {
     const segments = counts.map((count,index) => {
       if (!count || !answered) return '';
       const share = count / answered * 100;
-      return `<span class="criterion-analysis-segment analysis-level-${index}" style="width:${share}%" title="${escapeHtml(state.levelNames[index] || `Niveau ${index + 1}`)}: ${count}">${share >= 13 ? `${Math.round(share)}%` : ''}</span>`;
+      return `<span class="criterion-analysis-segment analysis-level-${index}" data-width="${share}" title="${escapeHtml(state.levelNames[index] || `Niveau ${index + 1}`)}: ${count}">${share >= 13 ? `${Math.round(share)}%` : ''}</span>`;
     }).join('');
     return `<div class="criterion-analysis-row"><strong title="${escapeHtml(criterion.title)}">${escapeHtml(criterion.title || 'Naamloos criterium')}</strong><div class="criterion-analysis-track">${segments}</div><small>${answered} beoordeeld</small></div>`;
   }).join('') : '<p class="overview-empty">Deze rubric bevat nog geen criteria.</p>';
+  $('#criteriaAnalysis').querySelectorAll('[data-width]').forEach(segment => { segment.style.width = `${segment.dataset.width}%`; });
 
   $('#webGradeListBody').innerHTML = data.rows.length ? data.rows.map(item => {
     const id = item.id || '';
@@ -1037,30 +1049,76 @@ function gradeListFileBase() {
   return ['Cijferlijst',className,title].filter(Boolean).join(' - ');
 }
 
-function buildGradeListPdf() {
-  const { jsPDF } = window.jspdf, data = gradeListData();
-  const pdf = new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
-  const navy = [18,61,85], orange = [235,113,70], sky = [220,235,240], muted = [97,114,123];
-  pdf.setFont('helvetica','bold'); pdf.setTextColor(...orange); pdf.setFontSize(7); pdf.text('CIJFERLIJST',14,13);
+function pdfContext() {
+  return [assessmentBook.className && `Klas: ${assessmentBook.className}`,assessmentBook.teacherName && `Docent: ${assessmentBook.teacherName}`].filter(Boolean).join('   ·   ');
+}
+
+function drawResultsPdfHeader(pdf, label) {
+  const navy = [18,61,85], orange = [235,113,70], muted = [97,114,123];
+  pdf.setFont('helvetica','bold'); pdf.setTextColor(...orange); pdf.setFontSize(7); pdf.text(label.toUpperCase(),14,13);
   pdf.setTextColor(...navy); pdf.setFontSize(17); pdf.text(state.title.trim() || 'Rubric',14,21);
   pdf.setFont('helvetica','normal'); pdf.setFontSize(8); pdf.setTextColor(...muted);
-  const context = [assessmentBook.className && `Klas: ${assessmentBook.className}`,assessmentBook.teacherName && `Docent: ${assessmentBook.teacherName}`].filter(Boolean).join('   ·   ');
-  if (context) pdf.text(context,14,27);
+  const context = pdfContext(); if (context) pdf.text(context,14,27);
+}
+
+function addStatisticsPdfPage(pdf, addPage = false) {
+  if (addPage) pdf.addPage('a4','landscape');
+  const data = gradeListData(), valid = validCriteria(), named = namedAssessments();
+  const navy = [18,61,85], navy2 = [29,88,116], orange = [235,113,70], sky = [220,235,240], canvas = [238,242,242], muted = [97,114,123], white = [255,255,255];
+  drawResultsPdfHeader(pdf,'Klasresultaten');
+  const percentage = value => data.completedCount ? Math.round(value / data.completedCount * 100) : 0;
   const stats = [
     ['Beoordeeld',`${data.completedCount} van ${data.rows.length}`],
-    ['Gemiddeld cijfer',data.average === null ? '-' : data.average.toFixed(1).replace('.',',')],
-    ['Voldoende',data.completedCount ? `${data.sufficient} · ${Math.round(data.sufficient/data.completedCount*100)}%` : '0'],
-    ['Onvoldoende',data.completedCount ? `${data.insufficient} · ${Math.round(data.insufficient/data.completedCount*100)}%` : '0']
+    ['Gemiddeld',data.average === null ? '-' : data.average.toFixed(1).replace('.',',')],
+    ['Mediaan',data.median === null ? '-' : data.median.toFixed(1).replace('.',',')],
+    ['Voldoende',`${data.sufficient} · ${percentage(data.sufficient)}%`],
+    ['Onvoldoende',`${data.insufficient} · ${percentage(data.insufficient)}%`]
   ];
-  const statY = 32, statGap = 4, statWidth = (269 - statGap * 3) / 4;
+  const cardY = 33, cardGap = 3, cardWidth = (269 - cardGap * 4) / 5;
   stats.forEach(([label,value],index) => {
-    const x = 14 + index * (statWidth + statGap);
-    pdf.setFillColor(...sky); pdf.roundedRect(x,statY,statWidth,15,1.5,1.5,'F');
-    pdf.setFont('helvetica','normal'); pdf.setFontSize(6.5); pdf.setTextColor(...muted); pdf.text(label,x+4,statY+5);
-    pdf.setFont('helvetica','bold'); pdf.setFontSize(10); pdf.setTextColor(...navy); pdf.text(value,x+4,statY+11.5);
+    const x = 14 + index * (cardWidth + cardGap);
+    pdf.setFillColor(...sky); pdf.roundedRect(x,cardY,cardWidth,16,1.5,1.5,'F');
+    pdf.setFont('helvetica','normal'); pdf.setFontSize(6.2); pdf.setTextColor(...muted); pdf.text(label.toUpperCase(),x+4,cardY+5);
+    pdf.setFont('helvetica','bold'); pdf.setFontSize(10.5); pdf.setTextColor(...navy); pdf.text(value,x+4,cardY+12);
   });
+
+  const panelY = 55, panelH = 137, gradeX = 14, gradeW = 88, criteriaX = 106, criteriaW = 177;
+  pdf.setDrawColor(203,214,217); pdf.setFillColor(...white); pdf.roundedRect(gradeX,panelY,gradeW,panelH,2,2,'FD'); pdf.roundedRect(criteriaX,panelY,criteriaW,panelH,2,2,'FD');
+  pdf.setFont('helvetica','bold'); pdf.setFontSize(6.5); pdf.setTextColor(...orange); pdf.text('CIJFERS',gradeX+5,panelY+8); pdf.text('CRITERIA',criteriaX+5,panelY+8);
+  pdf.setTextColor(...navy); pdf.setFontSize(11); pdf.text('Cijferverdeling',gradeX+5,panelY+15); pdf.text('Verdeling per criterium',criteriaX+5,panelY+15);
+
+  const gradeCounts = data.rows.filter(item => item.complete).reduce((counts,item) => { const key=item.grade.toFixed(1); counts.set(key,(counts.get(key)||0)+1); return counts; },new Map());
+  const gradeEntries = [...gradeCounts.entries()].sort((a,b)=>Number(a[0])-Number(b[0]));
+  if (!gradeEntries.length) { pdf.setFont('helvetica','normal'); pdf.setFontSize(8); pdf.setTextColor(...muted); pdf.text('Nog geen volledige beoordelingen.',gradeX+5,panelY+26); }
+  else {
+    const maxCount = Math.max(...gradeEntries.map(([,count])=>count)), availableH = panelH - 25, rowH = Math.min(8,availableH / gradeEntries.length);
+    gradeEntries.forEach(([grade,count],index) => {
+      const y = panelY + 23 + index * rowH;
+      pdf.setFont('helvetica','bold'); pdf.setFontSize(6.8); pdf.setTextColor(...navy); pdf.text(Number(grade).toFixed(1).replace('.',','),gradeX+5,y+3.5);
+      const trackX=gradeX+17, trackW=gradeW-28; pdf.setFillColor(...canvas); pdf.roundedRect(trackX,y,trackW,4.5,1,1,'F');
+      pdf.setFillColor(...navy); pdf.roundedRect(trackX,y,Math.max(1,trackW*count/maxCount),4.5,1,1,'F'); pdf.text(String(count),gradeX+gradeW-6,y+3.5,{align:'right'});
+    });
+  }
+
+  const legendY=panelY+22; state.levelNames.forEach((name,index)=>{ const x=criteriaX+5+index*38; pdf.setFillColor(...[orange,navy2,navy][index]); pdf.roundedRect(x,legendY,3,3,.5,.5,'F'); pdf.setFont('helvetica','normal'); pdf.setFontSize(6.2); pdf.setTextColor(...muted); pdf.text(String(name||`Niveau ${index+1}`).slice(0,16),x+5,legendY+2.7); });
+  const availableH = panelH - 37, rowH = valid.length ? Math.min(8.2,availableH / valid.length) : 8;
+  valid.forEach((criterion,index) => {
+    const counts=[0,0,0]; named.forEach(item=>{ const choice=item.choices?.[criterion.id]; if(Number.isInteger(choice)&&choice>=0&&choice<=2) counts[choice]+=1; });
+    const answered=counts.reduce((sum,count)=>sum+count,0), y=panelY+32+index*rowH;
+    const label=String(criterion.title||'Naamloos criterium'), shown=label.length>30?`${label.slice(0,29)}…`:label;
+    pdf.setFont('helvetica','bold'); pdf.setFontSize(6.5); pdf.setTextColor(...navy); pdf.text(shown,criteriaX+5,y+3.8);
+    const trackX=criteriaX+65, trackW=criteriaW-84; pdf.setFillColor(...canvas); pdf.roundedRect(trackX,y,trackW,5,1,1,'F');
+    let cursor=trackX; counts.forEach((count,level)=>{ if(!count||!answered)return; const width=trackW*count/answered; pdf.setFillColor(...[orange,navy2,navy][level]); pdf.rect(cursor,y,width,5,'F'); if(width>11){pdf.setFont('helvetica','bold');pdf.setFontSize(5.8);pdf.setTextColor(...white);pdf.text(`${Math.round(count/answered*100)}%`,cursor+width/2,y+3.6,{align:'center'});} cursor+=width; });
+    pdf.setFont('helvetica','normal'); pdf.setFontSize(5.8); pdf.setTextColor(...muted); pdf.text(`${answered} beoordeeld`,criteriaX+criteriaW-5,y+3.7,{align:'right'});
+  });
+}
+
+function addGradeListPdfPage(pdf, addPage = false) {
+  if (addPage) pdf.addPage('a4','landscape');
+  const data = gradeListData(), navy = [18,61,85];
+  drawResultsPdfHeader(pdf,'Cijferlijst');
   pdf.autoTable({
-    startY:52,head:[['Leerling','Punten','Cijfer','Opmerking']],
+    startY:33,head:[['Leerling','Punten','Cijfer','Opmerking']],
     body:data.rows.map(item => [item.student,`${item.total}/${item.max}`,item.grade === null ? '' : item.grade.toFixed(1).replace('.',','),item.comment]),
     margin:{left:14,right:14,bottom:12},
     styles:{font:'helvetica',fontSize:8,cellPadding:2.5,valign:'middle',lineColor:[203,211,214],lineWidth:.2,textColor:[24,48,62],overflow:'hidden'},
@@ -1074,15 +1132,25 @@ function buildGradeListPdf() {
       if (textWidth > available) cellData.cell.styles.fontSize = Math.max(3.2,8 * available / textWidth);
     }
   });
-  pdf.setProperties({title:`Cijferlijst ${state.title || 'Rubric'}`,subject:'Cijferlijst',creator:'OnlineRubric'});
+}
+
+function buildGradeListPdf(mode = 'list') {
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({orientation:'landscape',unit:'mm',format:'a4'});
+  if (mode === 'stats') addStatisticsPdfPage(pdf);
+  else if (mode === 'both') { addStatisticsPdfPage(pdf); addGradeListPdfPage(pdf,true); }
+  else addGradeListPdfPage(pdf);
+  const documentName = mode === 'stats' ? 'Statistieken' : mode === 'both' ? 'Resultaten' : 'Cijferlijst';
+  pdf.setProperties({title:`${documentName} ${state.title || 'Rubric'}`,subject:documentName,creator:'OnlineRubric'});
   return pdf;
 }
 
-async function downloadGradeListPdf() {
-  const target = await chooseSaveTarget(`${gradeListFileBase()}.pdf`,SAVE_FILE_TYPES.pdf);
+async function downloadGradeListPdf(mode = 'list') {
+  const prefix = mode === 'stats' ? 'Statistieken' : mode === 'both' ? 'Resultaten' : 'Cijferlijst';
+  const target = await chooseSaveTarget(`${gradeListFileBase().replace(/^Cijferlijst/,prefix)}.pdf`,SAVE_FILE_TYPES.pdf);
   if (!target) return;
-  try { showSaveToast(await saveBlob(buildGradeListPdf().output('blob'),target),'Cijferlijst als PDF opgeslagen.'); }
-  catch (error) { console.error(error); showToast('De cijferlijst kon niet worden opgeslagen.'); }
+  try { showSaveToast(await saveBlob(buildGradeListPdf(mode).output('blob'),target),'Resultaten als PDF opgeslagen.'); }
+  catch (error) { console.error(error); showToast('De resultaten konden niet worden opgeslagen.'); }
 }
 
 function csvCell(value) {
@@ -1184,7 +1252,11 @@ function showLinkLengthWarning() {
 }
 
 function startNewRubric() {
-  if (!confirm('Een nieuwe rubric starten? De huidige versie blijft alleen behouden als je die eerst opslaat.')) return;
+  $('#newRubricDialog').showModal();
+}
+
+function confirmNewRubric() {
+  $('#newRubricDialog').close();
   state = defaultState(); sharedLinkMode = false; resetAssessmentBook(); renderEditor(); applyTheme(); scheduleSave();
 }
 
@@ -1213,41 +1285,47 @@ $('#importFile').addEventListener('change', async event => {
   try {
     if (file.size > 2 * 1024 * 1024) throw new Error('Bestand te groot');
     const text = await file.text();
-    const returnToFill = $('#fillScreen').classList.contains('active');
-    if (file.name.toLocaleLowerCase('nl-NL').endsWith('.csv') || file.type === 'text/csv') prepareMagisterImport(text, returnToFill);
-    else prepareImport(JSON.parse(text), returnToFill);
+    const returnView = $('#classOverviewScreen').classList.contains('active') ? 'overview' : $('#fillScreen').classList.contains('active') ? 'fill' : 'editor';
+    if (file.name.toLocaleLowerCase('nl-NL').endsWith('.csv') || file.type === 'text/csv') prepareMagisterImport(text, returnView);
+    else prepareImport(JSON.parse(text), returnView);
   }
   catch { showToast('Dit bestand is geen geldige rubric, leerlinglijst, klasbestand of Magister-CSV.'); }
   event.target.value = '';
 });
 
 $('#newRubric').addEventListener('click', startNewRubric);
+$('#cancelNewRubric').addEventListener('click', () => $('#newRubricDialog').close());
+$('#newRubricDialog').addEventListener('cancel', () => $('#newRubricDialog').close());
+$('#confirmNewRubric').addEventListener('click', confirmNewRubric);
 $('#importButton').addEventListener('click', () => $('#importFile').click());
 $('#cancelAssessmentImport').addEventListener('click', closeAssessmentImportDialog);
-$('#assessmentImportDialog').addEventListener('cancel', () => { pendingAssessmentImport = null; pendingImportReturnToFill = false; });
+$('#assessmentImportDialog').addEventListener('cancel', () => { pendingAssessmentImport = null; pendingImportReturnView = 'editor'; });
 $('#cancelMagisterImport').addEventListener('click', closeMagisterImportDialog);
 $('#magisterImportDialog').addEventListener('cancel', closeMagisterImportDialog);
 $('#importMagisterFirstNames').addEventListener('click', () => importMagisterStudents(false));
 $('#importMagisterFullNames').addEventListener('click', () => importMagisterStudents(true));
 $('#importRubricOnly').addEventListener('click', () => {
   if (!pendingAssessmentImport) return;
-  const payload = pendingAssessmentImport, returnToFill = pendingImportReturnToFill;
+  const payload = pendingAssessmentImport, returnView = pendingImportReturnView;
   importRubricOnly(payload); closeAssessmentImportDialog();
-  if (returnToFill) { $('#fillProjectTitle').textContent = state.title; renderFill(); }
+  if (returnView === 'fill') renderFill();
+  if (returnView === 'overview') renderClassOverview();
   showToast('Alleen de rubric is geopend.');
 });
 $('#importStudentListOnly').addEventListener('click', () => {
   if (!pendingAssessmentImport) return;
-  const payload = pendingAssessmentImport, returnToFill = pendingImportReturnToFill;
+  const payload = pendingAssessmentImport, returnView = pendingImportReturnView;
   const addedCount = restoreStudentList(payload); closeAssessmentImportDialog();
-  if (returnToFill) renderFill();
+  if (returnView === 'fill') renderFill();
+  if (returnView === 'overview') renderClassOverview();
   showToast(`${addedCount} leerlingen geopend. De rubric is behouden.`);
 });
 $('#importRubricAndAssessments').addEventListener('click', () => {
   if (!pendingAssessmentImport) return;
-  const payload = pendingAssessmentImport, returnToFill = pendingImportReturnToFill;
+  const payload = pendingAssessmentImport, returnView = pendingImportReturnView;
   restoreAssessmentExport(payload); closeAssessmentImportDialog();
-  if (returnToFill) { $('#fillProjectTitle').textContent = state.title; renderFill(); }
+  if (returnView === 'fill') renderFill();
+  if (returnView === 'overview') renderClassOverview();
   showToast(`${assessmentBook.assessments.length} beoordelingen geopend.`);
 });
 $('#helpButton').addEventListener('click', openHelp);
@@ -1272,8 +1350,12 @@ $('#overviewFillTab').addEventListener('click', openFill);
 $('#mobileCloseFillButton').addEventListener('click', closeFill);
 $('#mobileCloseClassOverviewButton').addEventListener('click', closeClassOverview);
 $('#classOverviewButton').addEventListener('click', openClassOverview);
-$('#classOverviewPdfButton').addEventListener('click', downloadGradeListPdf);
+$('#classOverviewPdfButton').addEventListener('click', openResultsPdfDialog);
 $('#classOverviewCsvButton').addEventListener('click', downloadGradeListCsv);
+$('#overviewHelpButton').addEventListener('click', openHelp);
+$('#overviewThemeToggle').addEventListener('click', toggleTheme);
+$('#overviewImportButton').addEventListener('click', () => $('#importFile').click());
+$('#overviewExportButton').addEventListener('click', openRubricExportDialog);
 $('#fillHelpButton').addEventListener('click', openHelp);
 $('#fillThemeToggle').addEventListener('click', toggleTheme);
 $('#fillImportButton').addEventListener('click', () => $('#importFile').click());
@@ -1301,8 +1383,11 @@ $('#cancelAssessmentDownload').addEventListener('click', closeAssessmentDownload
 $('#assessmentDownloadDialog').addEventListener('cancel', closeAssessmentDownloadDialog);
 $('#downloadCompletedAssessments').addEventListener('click', () => { closeAssessmentDownloadDialog(); downloadAssessmentPdfs(false); });
 $('#downloadEveryAssessment').addEventListener('click', () => { closeAssessmentDownloadDialog(); downloadAssessmentPdfs(true); });
-$('#downloadGradeListPdf').addEventListener('click', () => { closeAssessmentDownloadDialog(); downloadGradeListPdf(); });
-$('#downloadGradeListCsv').addEventListener('click', () => { closeAssessmentDownloadDialog(); downloadGradeListCsv(); });
+$('#cancelResultsPdf').addEventListener('click', closeResultsPdfDialog);
+$('#resultsPdfDialog').addEventListener('cancel', closeResultsPdfDialog);
+$('#downloadResultsListOnly').addEventListener('click', () => { closeResultsPdfDialog(); downloadGradeListPdf('list'); });
+$('#downloadResultsWithStats').addEventListener('click', () => { closeResultsPdfDialog(); downloadGradeListPdf('both'); });
+$('#downloadResultsStatsOnly').addEventListener('click', () => { closeResultsPdfDialog(); downloadGradeListPdf('stats'); });
 $('#filledPdfButton').addEventListener('click', () => downloadSingleAssessmentPdf(assessment,true));
 $('#webGradeListBody').addEventListener('click', event => {
   const button = event.target.closest('button[data-action][data-id]'); if (!button) return;
