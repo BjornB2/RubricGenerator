@@ -29,9 +29,13 @@
     <a class="brand" href="#editor" aria-label="OnlineRubric start">
       <span><strong>OnlineRubric</strong><small>ontwerpen, beoordelen en delen</small></span>
     </a>
+    <nav class="primary-tabs" aria-label="Hoofdonderdelen">
+      <button type="button" class="active" id="editorTab" aria-current="page">Bewerken</button>
+      <button type="button" id="editorFillTab">Invullen</button>
+      <button type="button" id="editorResultsTab">Resultaten</button>
+    </nav>
     <button class="mobile-menu-toggle" id="mobileMenuToggle" type="button" aria-label="Menu openen" aria-controls="mobileMenu" aria-expanded="false"><span></span><span></span><span></span></button>
     <nav class="header-actions" aria-label="Bestandsacties">
-      <button class="button button-dark" id="fillButton">Online invullen</button>
       <button class="button button-accent" id="previewButton">PDF-preview</button>
       <button class="button button-ghost icon-control" id="helpButton" aria-label="Uitleg openen" title="Uitleg"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.8 9a2.4 2.4 0 1 1 3.4 2.2c-.8.4-1.2 1-1.2 1.8M12 17h.01"/></svg></button>
       <button class="button button-ghost icon-control theme-toggle" id="themeToggle" aria-label="Donkere modus inschakelen" title="Donkere modus inschakelen"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18Z" class="theme-half"/></svg></button>
@@ -39,7 +43,6 @@
         <button type="button" id="newRubric" aria-label="Nieuwe rubric" title="Nieuwe rubric"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M12 12v6m-3-3h6"/></svg></button>
         <button type="button" id="importButton" aria-label="Bestand openen" title="Bestand openen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 19V6a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v2"/><path d="M3 19h15l3-8H6Z"/></svg></button>
         <button type="button" id="exportButton" aria-label="Bestand opslaan" title="Bestand opslaan"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h12l3 3v15H4V4a1 1 0 0 1 1-1Z"/><path d="M8 3v6h8V3M8 21v-7h8v7"/></svg></button>
-        <button type="button" id="shareRubricButton" aria-label="Rubric delen" title="Rubric delen"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 10.5 6.8-4M8.6 13.5l6.8 4"/></svg></button>
       </div>
       <input type="file" id="importFile" accept="application/json,text/csv,.json,.rubric,.csv" hidden>
     </nav>
@@ -53,9 +56,9 @@
         <button type="button" id="mobileNewRubric">Nieuwe rubric</button>
         <button type="button" id="mobileImportRubric">Bestand openen</button>
         <button type="button" id="mobileExportRubric">Bestand opslaan</button>
-        <button type="button" id="mobileShareRubric">Delen met collega</button>
       </section>
       <section><h2>Weergave</h2>
+        <button type="button" id="mobileResultsButton">Resultaten</button>
         <button type="button" id="mobileThemeToggle" aria-label="Wissel tussen lichte en donkere modus">◐ <span>Donker thema</span></button>
         <button type="button" id="mobileHelpButton">Uitleg</button>
       </section>
@@ -65,6 +68,7 @@
   <nav class="mobile-bottom-bar no-print" aria-label="Snelle acties">
     <button type="button" id="mobileFillButton">Invullen</button>
     <button type="button" id="mobilePreviewButton">PDF-preview</button>
+    <button type="button" id="mobileBottomResultsButton">Resultaten</button>
   </nav>
 
   <main id="editor" class="editor-shell no-print">
@@ -142,12 +146,12 @@
         <li><span>1</span><div><h2>Maak de rubric</h2><p>Geef het project een naam, benoem de drie niveaus en beschrijf per criterium wat je op elk niveau verwacht. Houd namen en beschrijvingen kort en concreet: alle tekst gaat mee in de deellink. Voeg zoveel criteria toe als nodig.</p></div></li>
         <li><span>2</span><div><h2>Bepaal het gewicht</h2><p>De schuif heeft drie standen. De drie niveaus leveren per criterium 0, 1 of 2 keer dat gewicht op. Een criterium kan daardoor maximaal 2, 4 of 6 punten opleveren.</p></div></li>
         <li><span>3</span><div><h2>Beoordeel online</h2><p>Kies <strong>Online invullen</strong>, voeg leerlingen toe en selecteer per criterium het passende niveau. Je kunt ook een korte toelichting voor de leerling toevoegen. Het cijfer verschijnt zodra alle criteria zijn beoordeeld.</p></div></li>
-        <li><span>4</span><div><h2>Deel de rubric of beoordeling</h2><p>Deel vooraf een lege rubric of na afloop een ingevulde beoordeling. De leerling ziet een duidelijke, alleen-lezen weergave. Een deellink is een momentopname; na een aanpassing maak en deel je een nieuwe link.</p></div></li>
+        <li><span>4</span><div><h2>Deel met de leerling</h2><p>Deel vooraf een lege rubric of na afloop een ingevulde beoordeling. De leerling ziet een duidelijke, alleen-lezen weergave. Een deellink is een momentopname; na een aanpassing maak en deel je een nieuwe link.</p></div></li>
       </ol>
 
       <section class="help-grid">
         <article><h2>Leerlinglijsten openen</h2><p>Voeg leerlingen één voor één toe met <strong>Nieuwe leerling</strong> of open een opgeslagen leerlinglijst. Je kunt ook rechtstreeks een Magister-export als CSV-bestand gebruiken en kiezen voor alleen roepnamen of volledige namen. Vul klas en docent één keer in voor de hele lijst. De rubric blijft behouden; de geopende leerlinglijst vervangt wel de huidige leerlinglijst en beoordelingen.</p></article>
-        <article><h2>Delen met een collega</h2><p><strong>Rubric delen</strong> kopieert een link met het volledige ontwerp erin. Een collega opent de link in de browser en krijgt direct een eigen lokale kopie in de editor. Wijzigingen in die kopie veranderen jouw rubric niet. Na aanpassingen moet de collega de rubric opnieuw opslaan of een nieuwe deellink maken om de gewijzigde versie verder te delen.</p></article>
+        <article><h2>Delen met een collega</h2><p>Sla de rubric op als <strong>.rubric</strong>-bestand en deel dat bestand met je collega. De collega kan het bestand in OnlineRubric openen en krijgt een eigen lokale kopie om verder te bewerken.</p></article>
         <article><h2>Delen met een leerling</h2><p><strong>Deellink voor leerling</strong> maakt een alleen-lezen weergave. Zo kun je vooraf de lege rubric delen en later het resultaat met de eventuele toelichting. Bij een onvolledige rubric volgt eerst een waarschuwing. De leerling krijgt geen toegang tot de editor of andere leerlingen.</p></article>
         <article><h2>Bewaren en openen</h2><p>Je werk wordt automatisch in deze browser bewaard. Met <strong>Bestand opslaan</strong> en <strong>Bestand openen</strong> kun je een rubric, een leerlinglijst of alles inclusief beoordelingen bewaren en later weer gebruiken. Een losse leerlinglijst vervangt de huidige leerlinglijst, maar niet de openstaande rubric.</p></article>
         <article><h2>Hoe ontstaat het cijfer?</h2><p>Als je bij ieder criterium het middelste niveau kiest, is het eindcijfer precies een 6,0. Alles op het laagste niveau geeft een 1,0 en alles op het hoogste niveau een 10. Tussenliggende resultaten worden afgerond op halve cijfers.</p></article>
@@ -177,7 +181,7 @@
             <h3>Gericht en beheerst delen</h3>
             <ul>
               <li>Je houdt zelf de regie en kiest welke gegevens je opslaat of deelt.</li>
-              <li>Een collegadeellink bevat uitsluitend het rubricontwerp en geen leerlinggegevens.</li>
+              <li>Een losse rubric voor een collega bevat geen leerlinggegevens. Je deelt die eenvoudig als <strong>.rubric</strong>-bestand.</li>
               <li>Een leerlingdeellink bevat uitsluitend de beoordeling van die ene leerling. Gegevens van de rest van de klas worden niet opgenomen.</li>
               <li>De inhoud achter het <strong>#</strong>-teken van een deellink wordt niet naar de webserver gestuurd.</li>
             </ul>
@@ -224,11 +228,17 @@
 
   <section id="fillScreen" class="fill-screen no-print" aria-hidden="true">
     <div class="fill-toolbar">
-      <button class="button button-ghost" id="closeFillButton">← Terug naar editor</button>
-      <div><strong id="fillProjectTitle"></strong><small>Online beoordeling</small></div>
+      <button class="button button-ghost mobile-view-back" id="mobileCloseFillButton">← Bewerken</button>
+      <nav class="primary-tabs fill-primary-tabs" aria-label="Hoofdonderdelen">
+        <button type="button" id="fillEditorTab">Bewerken</button>
+        <button type="button" class="active" id="fillActiveTab" aria-current="page">Invullen</button>
+        <button type="button" id="fillResultsTab">Resultaten</button>
+      </nav>
+      <div class="fill-toolbar-title"><strong id="fillProjectTitle"></strong><small>Online beoordeling</small></div>
       <div class="fill-toolbar-actions">
         <button class="button button-dark button-with-icon" id="shareFilledButton"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 10.5 6.8-4M8.6 13.5l6.8 4"/></svg><span>Deellink voor leerling</span></button>
         <button class="button button-accent" id="filledPdfButton">PDF downloaden</button>
+        <button class="button button-ghost icon-control mobile-overview-control" id="classOverviewButton" aria-label="Klasoverzicht openen" title="Klasoverzicht"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10m6 10V4m6 16v-7m4 7H2"/></svg></button>
         <button class="button button-ghost icon-control" id="fillHelpButton" aria-label="Uitleg openen" title="Uitleg"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.8 9a2.4 2.4 0 1 1 3.4 2.2c-.8.4-1.2 1-1.2 1.8M12 17h.01"/></svg></button>
         <button class="button button-ghost icon-control theme-toggle" id="fillThemeToggle" aria-label="Donkere modus inschakelen" title="Donkere modus inschakelen"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18Z" class="theme-half"/></svg></button>
         <div class="management-icons fill-file-actions" aria-label="Bestand openen en opslaan">
@@ -272,6 +282,52 @@
         </label>
       </section>
       <div id="fillCriteria" class="fill-criteria"></div>
+      <footer class="site-footer"><a href="https://github.com/BjornB2/RubricGenerator" target="_blank" rel="noopener noreferrer">Bekijk OnlineRubric op GitHub</a></footer>
+    </main>
+  </section>
+
+  <section id="classOverviewScreen" class="fill-screen class-overview-screen no-print" aria-hidden="true">
+    <div class="fill-toolbar class-overview-toolbar">
+      <button class="button button-ghost mobile-view-back" id="mobileCloseClassOverviewButton">← Terug</button>
+      <nav class="primary-tabs fill-primary-tabs" aria-label="Hoofdonderdelen">
+        <button type="button" id="overviewEditorTab">Bewerken</button>
+        <button type="button" id="overviewFillTab">Invullen</button>
+        <button type="button" class="active" id="overviewResultsTab" aria-current="page">Resultaten</button>
+      </nav>
+      <div class="fill-toolbar-title"><strong id="classOverviewTitle"></strong><small>Cijferlijst en klasanalyse</small></div>
+      <div class="fill-toolbar-actions">
+        <button class="button button-ghost" id="classOverviewCsvButton">CSV downloaden</button>
+        <button class="button button-accent" id="classOverviewPdfButton">PDF downloaden</button>
+      </div>
+    </div>
+    <main class="fill-shell class-overview-shell">
+      <section class="overview-stats" aria-label="Statistieken">
+        <article><span>Beoordeeld</span><strong id="overviewCompleted">0 van 0</strong></article>
+        <article><span>Gemiddeld</span><strong id="overviewAverage">-</strong></article>
+        <article><span>Mediaan</span><strong id="overviewMedian">-</strong></article>
+        <article><span>Voldoende</span><strong id="overviewSufficient">0 · 0%</strong></article>
+        <article><span>Onvoldoende</span><strong id="overviewInsufficient">0 · 0%</strong></article>
+      </section>
+      <section class="overview-analyses">
+        <article class="overview-panel">
+          <div class="overview-panel-heading"><div><p class="eyebrow">Cijfers</p><h2>Cijferverdeling</h2></div><small>Alleen volledig beoordeelde leerlingen</small></div>
+          <div class="grade-distribution" id="gradeDistribution"></div>
+        </article>
+        <article class="overview-panel criteria-analysis-panel">
+          <div class="overview-panel-heading"><div><p class="eyebrow">Criteria</p><h2>Verdeling per criterium</h2></div><small>Ook gedeeltelijk ingevulde beoordelingen</small></div>
+          <div class="criteria-analysis-legend" id="criteriaAnalysisLegend"></div>
+          <div class="criteria-analysis" id="criteriaAnalysis"></div>
+        </article>
+      </section>
+      <section class="overview-panel grade-list-panel">
+        <div class="overview-panel-heading"><div><p class="eyebrow">Leerlingen</p><h2>Cijferlijst</h2></div><small>Alfabetisch op voornaam</small></div>
+        <div class="grade-list-scroll">
+          <table class="web-grade-list">
+            <thead><tr><th>Leerling</th><th>Punten</th><th>Cijfer</th><th>Opmerking</th><th><span class="sr-only">Acties</span></th></tr></thead>
+            <tbody id="webGradeListBody"></tbody>
+          </table>
+        </div>
+      </section>
       <footer class="site-footer"><a href="https://github.com/BjornB2/RubricGenerator" target="_blank" rel="noopener noreferrer">Bekijk OnlineRubric op GitHub</a></footer>
     </main>
   </section>

@@ -24,6 +24,8 @@ let pendingMagisterImport = null;
 let helpReturnToFill = false;
 let linkLengthWarningShown = false;
 let studentRenameMode = false;
+let pendingShareAssessment = null;
+let classOverviewReturnView = 'editor';
 let saveTimer;
 const $ = (selector) => document.querySelector(selector);
 const list = $('#criteriaList');
@@ -765,6 +767,7 @@ function openFill() {
   }
   studentRenameMode = false; closeMobileMenu(); document.body.classList.add('mobile-actions-hidden');
   $('#editor').style.display = 'none'; $('.app-header').style.display = 'none'; $('#preview').classList.remove('active');
+  $('#classOverviewScreen').classList.remove('active'); $('#classOverviewScreen').setAttribute('aria-hidden','true');
   $('#fillScreen').classList.add('active'); $('#fillScreen').setAttribute('aria-hidden','false');
   $('#fillProjectTitle').textContent = state.title;
   renderFill(); window.scrollTo(0,0);
@@ -772,7 +775,28 @@ function openFill() {
 
 function closeFill() {
   $('#fillScreen').classList.remove('active'); $('#fillScreen').setAttribute('aria-hidden','true');
+  $('#classOverviewScreen').classList.remove('active'); $('#classOverviewScreen').setAttribute('aria-hidden','true');
   $('#editor').style.display = ''; $('.app-header').style.display = ''; document.body.classList.remove('mobile-actions-hidden'); document.title = 'OnlineRubric';
+}
+
+function openClassOverview() {
+  if (assessmentBook.rubricTitle !== state.title) {
+    const teacherName = String(assessmentBook.teacherName || assessment.teacher || '').slice(0,80);
+    const first = blankAssessment(teacherName); first.rubricTitle = state.title;
+    assessmentBook = {rubricTitle:state.title,className:'',teacherName,activeId:first.id,assessments:[first]}; assessment = first;
+  }
+  classOverviewReturnView = $('#fillScreen').classList.contains('active') ? 'fill' : 'editor';
+  closeMobileMenu(); saveAssessmentBook(); document.body.classList.add('mobile-actions-hidden');
+  $('#editor').style.display = 'none'; $('.app-header').style.display = 'none'; $('#preview').classList.remove('active');
+  $('#fillScreen').classList.remove('active'); $('#fillScreen').setAttribute('aria-hidden','true');
+  $('#classOverviewScreen').classList.add('active'); $('#classOverviewScreen').setAttribute('aria-hidden','false');
+  $('#classOverviewTitle').textContent = state.title || 'Rubric';
+  renderClassOverview(); document.title = `${state.title || 'Rubric'} – Resultaten`; window.scrollTo(0,0);
+}
+
+function closeClassOverview() {
+  if (classOverviewReturnView === 'fill') openFill();
+  else closeFill();
 }
 
 function sortAssessmentsByStudentName() {
@@ -943,19 +967,69 @@ async function downloadAssessmentPdfs(includeIncomplete) {
   finally { button.disabled = false; button.removeAttribute('aria-busy'); }
 }
 
+async function downloadSingleAssessmentPdf(targetAssessment, requireComplete = false) {
+  const valid = validCriteria();
+  if (!targetAssessment?.student?.trim()) { showToast('Vul eerst de naam van de leerling in.'); return; }
+  if (requireComplete && !isAssessmentComplete(targetAssessment,valid)) { showToast('Vul eerst alle criteria voor deze leerling in.'); return; }
+  const fileName = `${assessmentFileBase()} - ${safeName(targetAssessment.student)}.pdf`;
+  const target = await chooseSaveTarget(fileName,SAVE_FILE_TYPES.pdf);
+  if (!target) return;
+  try { showSaveToast(await saveBlob(buildPdf(valid,maxPoints(valid),targetAssessment).output('blob'),target),'PDF opgeslagen.'); }
+  catch (error) { console.error(error); showToast('Opslaan is niet gelukt.'); }
+}
+
 function gradeListData() {
   const valid = validCriteria(), max = maxPoints(valid);
   const rows = namedAssessments().map(item => {
     const total = assessmentScore(valid,item), complete = isAssessmentComplete(item,valid);
-    return {student:item.student,total,max,complete,grade:complete ? gradeFor(total,max) : null,comment:String(item.comment || '').trim()};
+    return {id:item.id,student:item.student,total,max,complete,grade:complete ? gradeFor(total,max) : null,comment:String(item.comment || '').trim()};
   });
   const completed = rows.filter(item => item.complete);
   const sufficient = completed.filter(item => item.grade >= 5.5).length;
+  const sortedGrades = completed.map(item => item.grade).sort((left,right) => left-right);
+  const middle = Math.floor(sortedGrades.length / 2);
+  const median = sortedGrades.length ? (sortedGrades.length % 2 ? sortedGrades[middle] : (sortedGrades[middle - 1] + sortedGrades[middle]) / 2) : null;
   return {
     rows,completedCount:completed.length,
     average:completed.length ? completed.reduce((sum,item) => sum + item.grade,0) / completed.length : null,
-    sufficient,insufficient:completed.length - sufficient
+    median,sufficient,insufficient:completed.length - sufficient
   };
+}
+
+function renderClassOverview() {
+  const data = gradeListData(), valid = validCriteria(), named = namedAssessments();
+  const percentage = value => data.completedCount ? Math.round(value / data.completedCount * 100) : 0;
+  $('#overviewCompleted').textContent = `${data.completedCount} van ${data.rows.length}`;
+  $('#overviewAverage').textContent = data.average === null ? '-' : data.average.toFixed(1).replace('.',',');
+  $('#overviewMedian').textContent = data.median === null ? '-' : data.median.toFixed(1).replace('.',',');
+  $('#overviewSufficient').textContent = `${data.sufficient} · ${percentage(data.sufficient)}%`;
+  $('#overviewInsufficient').textContent = `${data.insufficient} · ${percentage(data.insufficient)}%`;
+
+  const gradeCounts = data.rows.filter(item => item.complete).reduce((counts,item) => {
+    const label = item.grade.toFixed(1).replace('.',','); counts.set(label,(counts.get(label) || 0) + 1); return counts;
+  },new Map());
+  const gradeEntries = [...gradeCounts.entries()].sort((left,right) => Number(left[0].replace(',','.')) - Number(right[0].replace(',','.')));
+  const largestGradeCount = Math.max(0,...gradeEntries.map(([,count]) => count));
+  $('#gradeDistribution').innerHTML = gradeEntries.length ? gradeEntries.map(([grade,count]) => `<div class="distribution-row"><span>${escapeHtml(grade)}</span><div class="distribution-track"><div class="distribution-bar" style="width:${count/largestGradeCount*100}%"></div></div><b>${count}</b></div>`).join('') : '<p class="overview-empty">Er zijn nog geen volledig beoordeelde leerlingen.</p>';
+
+  $('#criteriaAnalysisLegend').innerHTML = state.levelNames.map((name,index) => `<span><i class="analysis-level-${index}"></i>${escapeHtml(name.trim() || `Niveau ${index + 1}`)}</span>`).join('');
+  $('#criteriaAnalysis').innerHTML = valid.length ? valid.map(criterion => {
+    const counts = [0,0,0];
+    named.forEach(item => { const choice = item.choices?.[criterion.id]; if (Number.isInteger(choice) && choice >= 0 && choice <= 2) counts[choice] += 1; });
+    const answered = counts.reduce((sum,count) => sum + count,0);
+    const segments = counts.map((count,index) => {
+      if (!count || !answered) return '';
+      const share = count / answered * 100;
+      return `<span class="criterion-analysis-segment analysis-level-${index}" style="width:${share}%" title="${escapeHtml(state.levelNames[index] || `Niveau ${index + 1}`)}: ${count}">${share >= 13 ? `${Math.round(share)}%` : ''}</span>`;
+    }).join('');
+    return `<div class="criterion-analysis-row"><strong title="${escapeHtml(criterion.title)}">${escapeHtml(criterion.title || 'Naamloos criterium')}</strong><div class="criterion-analysis-track">${segments}</div><small>${answered} beoordeeld</small></div>`;
+  }).join('') : '<p class="overview-empty">Deze rubric bevat nog geen criteria.</p>';
+
+  $('#webGradeListBody').innerHTML = data.rows.length ? data.rows.map(item => {
+    const id = item.id || '';
+    const grade = item.grade === null ? '' : item.grade.toFixed(1).replace('.',',');
+    return `<tr><td><button class="student-row-link" type="button" data-action="open" data-id="${escapeHtml(id)}">${escapeHtml(item.student)}</button></td><td>${item.total}/${item.max}</td><td>${grade}</td><td>${escapeHtml(item.comment)}</td><td><div class="grade-row-actions"><button type="button" data-action="pdf" data-id="${escapeHtml(id)}" aria-label="PDF van ${escapeHtml(item.student)} downloaden" title="PDF downloaden"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M12 11v7m-3-3 3 3 3-3"/></svg></button><button type="button" data-action="share" data-id="${escapeHtml(id)}" aria-label="Deellink voor ${escapeHtml(item.student)} kopiëren" title="Deellink kopiëren"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 10.5 6.8-4M8.6 13.5l6.8 4"/></svg></button></div></td></tr>`;
+  }).join('') : '<tr><td colspan="5"><p class="overview-empty">Voeg eerst leerlingen toe bij Invullen.</p></td></tr>';
 }
 
 function gradeListFileBase() {
@@ -1062,12 +1136,12 @@ async function gzipDecode(value) {
   return new Response(stream).text();
 }
 
-async function makeShareLink(includeAssessment, allowIncomplete = false) {
+async function makeShareLink(includeAssessment, allowIncomplete = false, targetAssessment = assessment) {
   try {
-    if (includeAssessment && !allowIncomplete && !assessment.student.trim()) { showToast('Vul eerst de voornaam van de leerling in.'); return; }
-    if (includeAssessment && !allowIncomplete && !isAssessmentComplete(assessment)) { showToast('Vul eerst alle criteria voor deze leerling in.'); return; }
+    if (includeAssessment && !allowIncomplete && !targetAssessment.student.trim()) { showToast('Vul eerst de voornaam van de leerling in.'); return; }
+    if (includeAssessment && !allowIncomplete && !isAssessmentComplete(targetAssessment)) { showToast('Vul eerst alle criteria voor deze leerling in.'); return; }
     const sharedState = {version:state.version,title:state.title,levelNames:state.levelNames,criteria:state.criteria};
-    const payload = {v:1,r:sharedState,...(includeAssessment ? {a:assessment} : {})};
+    const payload = {v:1,r:sharedState,...(includeAssessment ? {a:targetAssessment} : {})};
     const encoded = await gzipEncode(JSON.stringify(payload));
     const url = `${location.origin}${location.pathname}#rubric=v1.${encoded}`;
     await navigator.clipboard.writeText(url);
@@ -1075,15 +1149,16 @@ async function makeShareLink(includeAssessment, allowIncomplete = false) {
   } catch (error) { console.error(error); showToast('Deellink maken is niet gelukt.'); }
 }
 
-function requestStudentShareLink() {
-  if (isAssessmentComplete(assessment)) {
-    makeShareLink(true);
+function requestStudentShareLink(targetAssessment = assessment) {
+  if (isAssessmentComplete(targetAssessment)) {
+    makeShareLink(true,false,targetAssessment);
     return;
   }
+  pendingShareAssessment = targetAssessment;
   $('#incompleteShareDialog').showModal();
 }
 
-function closeIncompleteShareDialog() { $('#incompleteShareDialog').close(); }
+function closeIncompleteShareDialog() { pendingShareAssessment = null; $('#incompleteShareDialog').close(); }
 
 async function loadSharedLink() {
   const match = location.hash.match(/^#rubric=v1\.([A-Za-z0-9_-]+)$/); if (!match) return;
@@ -1184,23 +1259,32 @@ $('#rubricExportDialog').addEventListener('cancel', closeRubricExportDialog);
 $('#exportRubricOnly').addEventListener('click', () => { closeRubricExportDialog(); exportSettings(); });
 $('#exportStudentListOnly').addEventListener('click', () => { closeRubricExportDialog(); downloadStudentList(); });
 $('#exportRubricAndAssessments').addEventListener('click', () => { closeRubricExportDialog(); downloadAssessmentsJson(); });
-$('#shareRubricButton').addEventListener('click', () => makeShareLink(false));
-$('#fillButton').addEventListener('click', openFill);
+$('#editorFillTab').addEventListener('click', openFill);
+$('#editorResultsTab').addEventListener('click', openClassOverview);
 $('#addCriterionBottom').addEventListener('click', () => addCriterion());
 $('#previewButton').addEventListener('click', () => openPreview());
 $('#backButton').addEventListener('click', closePreview);
 $('#downloadPackage').addEventListener('click', () => sharedLinkMode ? downloadPreviewPdf() : downloadPackage());
-$('#closeFillButton').addEventListener('click', closeFill);
+$('#fillEditorTab').addEventListener('click', closeFill);
+$('#fillResultsTab').addEventListener('click', openClassOverview);
+$('#overviewEditorTab').addEventListener('click', closeFill);
+$('#overviewFillTab').addEventListener('click', openFill);
+$('#mobileCloseFillButton').addEventListener('click', closeFill);
+$('#mobileCloseClassOverviewButton').addEventListener('click', closeClassOverview);
+$('#classOverviewButton').addEventListener('click', openClassOverview);
+$('#classOverviewPdfButton').addEventListener('click', downloadGradeListPdf);
+$('#classOverviewCsvButton').addEventListener('click', downloadGradeListCsv);
 $('#fillHelpButton').addEventListener('click', openHelp);
 $('#fillThemeToggle').addEventListener('click', toggleTheme);
 $('#fillImportButton').addEventListener('click', () => $('#importFile').click());
 $('#fillExportButton').addEventListener('click', openRubricExportDialog);
-$('#shareFilledButton').addEventListener('click', requestStudentShareLink);
+$('#shareFilledButton').addEventListener('click', () => requestStudentShareLink());
 $('#cancelIncompleteShare').addEventListener('click', closeIncompleteShareDialog);
 $('#incompleteShareDialog').addEventListener('cancel', closeIncompleteShareDialog);
 $('#confirmIncompleteShare').addEventListener('click', () => {
+  const targetAssessment = pendingShareAssessment || assessment;
   closeIncompleteShareDialog();
-  makeShareLink(true, true);
+  makeShareLink(true, true, targetAssessment);
 });
 $('#addStudentButton').addEventListener('click', addStudentAssessment);
 $('#removeStudentButton').addEventListener('click', () => removeStudentAssessment(assessment.id));
@@ -1219,15 +1303,13 @@ $('#downloadCompletedAssessments').addEventListener('click', () => { closeAssess
 $('#downloadEveryAssessment').addEventListener('click', () => { closeAssessmentDownloadDialog(); downloadAssessmentPdfs(true); });
 $('#downloadGradeListPdf').addEventListener('click', () => { closeAssessmentDownloadDialog(); downloadGradeListPdf(); });
 $('#downloadGradeListCsv').addEventListener('click', () => { closeAssessmentDownloadDialog(); downloadGradeListCsv(); });
-$('#filledPdfButton').addEventListener('click', async () => {
-  const valid = validCriteria(); if (!assessment.student.trim()) { showToast('Vul eerst de voornaam van de leerling in.'); return; }
-  if (!isAssessmentComplete(assessment,valid)) { showToast('Vul eerst alle criteria voor deze leerling in.'); return; }
-  const fileName = `${assessmentFileBase()} - ${safeName(assessment.student)}.pdf`;
-  const target = await chooseSaveTarget(fileName,SAVE_FILE_TYPES.pdf);
-  if (!target) return;
-  try {
-    showSaveToast(await saveBlob(buildPdf(valid,maxPoints(valid),assessment).output('blob'),target),'PDF opgeslagen.');
-  } catch (error) { console.error(error); showToast('Opslaan is niet gelukt.'); }
+$('#filledPdfButton').addEventListener('click', () => downloadSingleAssessmentPdf(assessment,true));
+$('#webGradeListBody').addEventListener('click', event => {
+  const button = event.target.closest('button[data-action][data-id]'); if (!button) return;
+  const targetAssessment = assessmentBook.assessments.find(item => item.id === button.dataset.id); if (!targetAssessment) return;
+  if (button.dataset.action === 'open') { selectStudentAssessment(targetAssessment.id); openFill(); }
+  if (button.dataset.action === 'pdf') downloadSingleAssessmentPdf(targetAssessment,false);
+  if (button.dataset.action === 'share') requestStudentShareLink(targetAssessment);
 });
 $('#sharedPdfButton').addEventListener('click', downloadPreviewPdf);
 
@@ -1237,11 +1319,12 @@ $('.mobile-menu-backdrop').addEventListener('click', closeMobileMenu);
 $('#mobileNewRubric').addEventListener('click', () => { closeMobileMenu(); startNewRubric(); });
 $('#mobileImportRubric').addEventListener('click', () => { closeMobileMenu(); $('#importFile').click(); });
 $('#mobileExportRubric').addEventListener('click', () => { closeMobileMenu(); openRubricExportDialog(); });
-$('#mobileShareRubric').addEventListener('click', () => { closeMobileMenu(); makeShareLink(false); });
+$('#mobileResultsButton').addEventListener('click', openClassOverview);
 $('#mobileThemeToggle').addEventListener('click', () => { toggleTheme(); closeMobileMenu(); });
 $('#mobileHelpButton').addEventListener('click', () => { closeMobileMenu(); openHelp(); });
 $('#mobileFillButton').addEventListener('click', openFill);
 $('#mobilePreviewButton').addEventListener('click', () => openPreview());
+$('#mobileBottomResultsButton').addEventListener('click', openClassOverview);
 $('#dismissLinkLengthWarning').addEventListener('click', () => {
   if ($('#hideLinkLengthWarning').checked) localStorage.setItem(LINK_LENGTH_WARNING_KEY, 'hidden');
   $('#linkLengthWarning').hidden = true;

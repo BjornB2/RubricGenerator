@@ -38,8 +38,10 @@ Een leerling krijgt via de deellink alleen de eigen, afgeronde beoordeling te zi
 - Een leerlinglijst afzonderlijk openen en opslaan zonder de huidige rubric te vervangen
 - Een Magister-leerlinglijst uit CSV importeren met roepnamen of volledige namen
 - Een complete klas met rubric en beoordelingen openen en opslaan
-- Een rubric of ingevulde beoordeling delen via een zelfstandige deellink
-- Eén leerling-PDF of alle voltooide PDF's als ZIP downloaden
+- Een lege of ingevulde leerlingbeoordeling delen via een zelfstandige deellink
+- Eén leerling-PDF, alle voltooide PDF's of alle PDF's als ZIP downloaden
+- Een webgebaseerd klasoverzicht met cijferstatistieken en analyse per criterium
+- Een alfabetische cijferlijst als PDF of CSV downloaden
 - Een liggende A4-preview en printklare PDF genereren
 - Lichte en donkere schermweergave
 - Aangepaste bediening voor kleinere schermen
@@ -49,8 +51,8 @@ Een leerling krijgt via de deellink alleen de eigen, afgeronde beoordeling te zi
 1. Open [onlinerubric.nl](https://onlinerubric.nl/).
 2. Geef de rubric een naam en benoem de drie prestatieniveaus.
 3. Voeg criteria, omschrijvingen en eventuele weging toe.
-4. Kies **Online invullen** om leerlingen te beoordelen of **PDF-preview** voor een papieren rubric.
-5. Sla het werk lokaal op als `.rubric`-bestand of maak een deellink.
+4. Ga naar **Invullen** om leerlingen te beoordelen en naar **Resultaten** voor de klasanalyse.
+5. Sla het werk lokaal op als `.rubric`-bestand of maak voor een leerling een deellink.
 
 ## Privacygericht ontworpen
 
@@ -60,7 +62,7 @@ De toepassing gebruikt geen gebruikersaccounts, analytics, trackingcookies of ex
 
 De website draait als statische website op GitHub Pages. GitHub verwerkt bij het laden technische bezoekgegevens, waaronder het IP-adres, voor beveiligingsdoeleinden. GitHub ontvangt niet de inhoud van rubrics of beoordelingen.
 
-Een collegadeellink bevat alleen het rubricontwerp. Een leerlingdeellink bevat uitsluitend de beoordeling van die ene leerling. De informatie is compact verwerkt in het gedeelte na het `#`-teken en wordt niet naar de webserver gestuurd. Behandel een leerlinglink daarom als een persoonlijk document en deel hem alleen met de bedoelde ontvanger.
+Een losse rubric voor een collega bevat geen leerlinggegevens en kan als `.rubric`-bestand worden gedeeld. Een leerlingdeellink bevat uitsluitend de beoordeling van die ene leerling. De informatie is compact verwerkt in het gedeelte na het `#`-teken en wordt niet naar de webserver gestuurd. Behandel een leerlinglink daarom als een persoonlijk document en deel hem alleen met de bedoelde ontvanger.
 
 ## Bestanden openen en opslaan
 
