@@ -1037,7 +1037,7 @@ function renderClassOverview() {
       const share = count / answered * 100;
       return `<span class="criterion-analysis-segment analysis-level-${index}" data-width="${share}" title="${escapeHtml(state.levelNames[index] || `Niveau ${index + 1}`)}: ${count}">${share >= 13 ? `${Math.round(share)}%` : ''}</span>`;
     }).join('');
-    return `<div class="criterion-analysis-row"><strong title="${escapeHtml(criterion.title)}">${escapeHtml(criterion.title || 'Naamloos criterium')}</strong><div class="criterion-analysis-track">${segments}</div><small>${answered} beoordeeld</small></div>`;
+    return `<div class="criterion-analysis-row"><strong title="${escapeHtml(criterion.title)}">${escapeHtml(criterion.title || 'Naamloos criterium')}</strong><div class="criterion-analysis-track">${segments}</div></div>`;
   }).join('') : '<p class="overview-empty">Deze rubric bevat nog geen criteria.</p>';
   $('#criteriaAnalysis').querySelectorAll('[data-width]').forEach(segment => { segment.style.width = `${segment.dataset.width}%`; });
 
@@ -1111,9 +1111,20 @@ function addStatisticsPdfPage(pdf, addPage = false) {
     const answered=counts.reduce((sum,count)=>sum+count,0), y=panelY+32+index*rowH;
     const label=String(criterion.title||'Naamloos criterium'), shown=label.length>30?`${label.slice(0,29)}…`:label;
     pdf.setFont('helvetica','bold'); pdf.setFontSize(6.5); pdf.setTextColor(...navy); pdf.text(shown,criteriaX+5,y+3.8);
-    const trackX=criteriaX+65, trackW=criteriaW-84; pdf.setFillColor(...canvas); pdf.roundedRect(trackX,y,trackW,5,1,1,'F');
-    let cursor=trackX; counts.forEach((count,level)=>{ if(!count||!answered)return; const width=trackW*count/answered; pdf.setFillColor(...[orange,navy2,navy][level]); pdf.rect(cursor,y,width,5,'F'); if(width>11){pdf.setFont('helvetica','bold');pdf.setFontSize(5.8);pdf.setTextColor(...white);pdf.text(`${Math.round(count/answered*100)}%`,cursor+width/2,y+3.6,{align:'center'});} cursor+=width; });
-    pdf.setFont('helvetica','normal'); pdf.setFontSize(5.8); pdf.setTextColor(...muted); pdf.text(`${answered} beoordeeld`,criteriaX+criteriaW-5,y+3.7,{align:'right'});
+    const trackX=criteriaX+65, trackW=criteriaW-70; pdf.setFillColor(...canvas); pdf.roundedRect(trackX,y,trackW,5,1,1,'F');
+    const visibleLevels = counts.map((count,level) => ({count,level})).filter(item => item.count > 0);
+    let cursor=trackX; visibleLevels.forEach((item,visibleIndex)=>{
+      const width=trackW*item.count/answered, first=visibleIndex===0, last=visibleIndex===visibleLevels.length-1;
+      pdf.setFillColor(...[orange,navy2,navy][item.level]);
+      if (first || last) {
+        const radius=Math.min(1,width/2);
+        pdf.roundedRect(cursor,y,width,5,radius,radius,'F');
+        if (!last) pdf.rect(cursor+Math.max(0,width-1),y,Math.min(1,width),5,'F');
+        if (!first) pdf.rect(cursor,y,Math.min(1,width),5,'F');
+      } else pdf.rect(cursor,y,width,5,'F');
+      if(width>11){pdf.setFont('helvetica','bold');pdf.setFontSize(5.8);pdf.setTextColor(...white);pdf.text(`${Math.round(item.count/answered*100)}%`,cursor+width/2,y+3.6,{align:'center'});}
+      cursor+=width;
+    });
   });
 }
 
