@@ -18,13 +18,13 @@ Criteria zijn eenvoudig te ordenen, te wegen en te voorzien van drie eigen prest
 
 ![De leerlingweergave van een ingevulde voorbeeldrubric](docs/screenshots/learner-view.png)
 
-Een leerling krijgt via de deellink alleen de eigen, afgeronde beoordeling te zien. De gebruikte namen en inhoud in deze screenshots zijn fictief.
+Een leerling krijgt via de deellink alleen de eigen rubric of beoordeling te zien. De gebruikte namen en inhoud in deze screenshots zijn fictief.
 
 ## Waarom OnlineRubric?
 
 - **Privacygericht:** rubrics, leerlingnamen, beoordelingen, cijfers en opmerkingen blijven lokaal in de browser.
 - **Direct bruikbaar:** geen account, installatie of database nodig.
-- **Eén overzichtelijke werkwijze:** van rubricontwerp naar online beoordeling, leerlinglink en PDF.
+- **Eén overzichtelijke werkwijze:** via de vaste onderdelen Bewerken, Invullen en Resultaten.
 - **Geschikt voor scherm en papier:** de invulweergave werkt responsief en de PDF is opgemaakt voor liggend A4.
 
 ## Mogelijkheden
@@ -40,9 +40,9 @@ Een leerling krijgt via de deellink alleen de eigen, afgeronde beoordeling te zi
 - Een complete klas met rubric en beoordelingen openen en opslaan
 - Een lege of ingevulde leerlingbeoordeling delen via een zelfstandige deellink
 - Eén leerling-PDF, alle voltooide PDF's of alle PDF's als ZIP downloaden
-- Een webgebaseerd klasoverzicht met cijferstatistieken en analyse per criterium
-- Een alfabetische cijferlijst als PDF of CSV downloaden
-- Klassikale statistieken zonder leerlingnamen als aparte PDF downloaden, eventueel gevolgd door de cijferlijst
+- Een webgebaseerd klasoverzicht met kengetallen, cijferverdeling en analyse per criterium
+- Een alfabetische cijferlijst als CSV downloaden
+- De cijferlijst, klassikale statistieken zonder leerlingnamen of beide samen als PDF downloaden
 - Een liggende A4-preview en printklare PDF genereren
 - Lichte en donkere schermweergave
 - Aangepaste bediening voor kleinere schermen
@@ -73,7 +73,7 @@ Bij openen en opslaan kan worden gekozen uit drie varianten:
 2. **Alleen leerlinglijst:** de klas- of clusternaam en de namen van leerlingen, zonder rubric of beoordelingen. Bij het openen vervangt deze de huidige leerlinglijst en beoordelingen; de openstaande rubric blijft behouden.
 3. **Alles:** de rubric, leerlinglijst en alle aanwezige beoordelingen.
 
-Een afzonderlijke leerlinglijst wordt opgeslagen als `Leerlinglijst Klasnaam.rubric`. Alle `.rubric`-bestanden bevatten gewone JSON en oudere `.json`-exports kunnen nog steeds worden geopend. De klas- of clusternaam wordt alleen gebruikt voor lokale bestandsnamen en verschijnt niet in de rubric of PDF.
+Een afzonderlijke leerlinglijst wordt opgeslagen als `Leerlinglijst Klasnaam.rubric`. Alle `.rubric`-bestanden bevatten gewone JSON en oudere `.json`-exports kunnen nog steeds worden geopend. De klas- of clusternaam wordt gebruikt om lokale bestanden herkenbaar te houden en om resultaten van verschillende groepen uit elkaar te houden.
 
 Chrome en Edge bieden waar mogelijk een bestandskiezer waarmee een locatie en bestandsnaam kan worden gekozen. In andere browsers wordt automatisch de normale downloadfunctie gebruikt.
 
