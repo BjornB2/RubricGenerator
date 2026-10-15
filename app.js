@@ -21,6 +21,7 @@ let previewAssessment = null;
 let pendingAssessmentImport = null;
 let pendingImportReturnView = 'editor';
 let pendingMagisterImport = null;
+let pendingSubjectTypeImport = null;
 let helpReturnView = 'editor';
 let linkLengthWarningShown = false;
 let studentRenameMode = false;
@@ -31,6 +32,71 @@ let saveTimer;
 let toastTimer;
 const $ = (selector) => document.querySelector(selector);
 const list = $('#criteriaList');
+
+function subjectTerms() {
+  const group = assessmentBook?.subjectType === 'group';
+  return group
+    ? {singular:'groep',plural:'groepen',Singular:'Groep',Plural:'Groepen'}
+    : {singular:'leerling',plural:'leerlingen',Singular:'Leerling',Plural:'Leerlingen'};
+}
+
+function updateSubjectTerminology() {
+  const terms = subjectTerms(), group = assessmentBook.subjectType === 'group';
+  $('#previewSubjectNameLabel').textContent = `Naam ${terms.singular}`;
+  $('#shareFilledLabel').textContent = `Deellink voor ${terms.singular}`;
+  $('#studentCounter').textContent = `${terms.Singular} 1 van 1`;
+  $('#studentSelect').setAttribute('aria-label', `Kies een ${terms.singular}`);
+  $('#editStudentNameButton').setAttribute('aria-label', `Naam van ${terms.singular} wijzigen`);
+  $('#subjectNameLabel').textContent = `Naam ${terms.singular}`;
+  $('#studentName').placeholder = group ? 'Bijvoorbeeld: Groep 1' : 'Bijvoorbeeld: Sanne';
+  $('#classContextSubjects').textContent = `voor alle ${terms.plural}`;
+  $('#teacherContextSubjects').textContent = `voor alle ${terms.plural}`;
+  $('.student-tabbar').setAttribute('aria-label', `Beoordeling en ${terms.plural} beheren`);
+  $('.student-actions').setAttribute('aria-label', `Klas en ${terms.plural} beheren`);
+  $('#addStudentButton').setAttribute('aria-label', `Nieuwe ${terms.singular}`);
+  $('#addStudentButton').title = `Nieuwe ${terms.singular}`;
+  $('#removeStudentButton').setAttribute('aria-label', `${terms.Singular} verwijderen`);
+  $('#removeStudentButton').title = `${terms.Singular} verwijderen`;
+  $('#assessmentCommentLabel').textContent = `Opmerking voor ${terms.singular}`;
+  $('#assessmentCommentHelpText').textContent = `Zichtbaar voor de ${terms.singular} en opgenomen in de deellink. Houd het kort.`;
+  $('#completedSubjectsLabel').textContent = `Alleen volledig beoordeelde ${terms.plural}`;
+  $('#subjectsOverviewLabel').textContent = terms.Plural;
+  $('#subjectsSortLabel').textContent = group ? 'Alfabetisch op groepsnaam' : 'Alfabetisch op voornaam';
+  $('#subjectTableHeading').textContent = terms.Singular;
+  $('#sharedSubjectLabel').textContent = terms.Singular;
+  $('#sharedSummary').setAttribute('aria-label', `Resultaat van de ${terms.singular}`);
+  $('#assessmentDownloadTitle').textContent = `Welke ${terms.plural} wil je downloaden?`;
+  $('#assessmentDownloadDialog .import-dialog-content>p:not(.eyebrow)').textContent = `Kies welke ${terms.singular}-PDF’s je wilt downloaden.`;
+  $('#downloadCompletedAssessments').childNodes[0].textContent = `Voltooide ${terms.singular}-PDF’s `;
+  $('#downloadEveryAssessment').childNodes[0].textContent = `Alle ${terms.singular}-PDF’s `;
+  $('#incompleteShareDialog .eyebrow').textContent = `Deellink voor ${terms.singular}`;
+  $('#incompleteShareTitle').textContent = `Deze rubric voor de ${terms.singular} is nog niet volledig ingevuld`;
+  $('#exportStudentListOnly').textContent = group ? 'Alleen groepenlijst opslaan' : 'Alleen leerlinglijst opslaan';
+  $('#rubricExportDescription').childNodes[0].textContent = `Kies of je de rubric, de ${group ? 'groepenlijst' : 'leerlinglijst'} of alles inclusief `;
+}
+
+function setSubjectType(subjectType) {
+  assessmentBook.subjectType = subjectType === 'group' ? 'group' : 'student';
+  saveAssessmentBook();
+  updateSubjectTerminology();
+  $('#subjectTypeStudent').checked = assessmentBook.subjectType === 'student';
+  $('#subjectTypeGroup').checked = assessmentBook.subjectType === 'group';
+}
+
+function importWithMatchingSubjectType(subjectType, action) {
+  const targetType = subjectType === 'group' ? 'group' : 'student';
+  if (assessmentBook.subjectType === targetType) { action(); return; }
+  const current = assessmentBook.subjectType === 'group' ? 'groepen' : 'losse leerlingen';
+  const incoming = targetType === 'group' ? 'groepen' : 'losse leerlingen';
+  pendingSubjectTypeImport = {targetType,action};
+  $('#subjectTypeMismatchMessage').textContent = `Deze rubric staat ingesteld op ${current}, maar de gekozen import bevat ${incoming}. Wil je de stand aanpassen en daarna importeren?`;
+  $('#subjectTypeMismatchDialog').showModal();
+}
+
+function closeSubjectTypeMismatchDialog() {
+  pendingSubjectTypeImport = null;
+  $('#subjectTypeMismatchDialog').close();
+}
 
 function safeIdentifier(value) {
   return typeof value === 'string' && /^[A-Za-z0-9_-]{1,100}$/.test(value) ? value : crypto.randomUUID();
@@ -66,16 +132,16 @@ function loadAssessmentBook() {
     if (Array.isArray(saved?.assessments) && saved.assessments.length) {
       const activeSaved = saved.assessments.find(item => item.id === saved.activeId);
       const teacherName = String(saved.teacherName ?? activeSaved?.teacher ?? saved.assessments.find(item => item?.teacher)?.teacher ?? '').slice(0,80);
-      return {...saved,className:String(saved.className ?? '').slice(0,60),teacherName,assessments:saved.assessments.map(item => ({...item,teacher:teacherName}))};
+      return {...saved,subjectType:saved.subjectType === 'group' ? 'group' : 'student',className:String(saved.className ?? '').slice(0,60),teacherName,assessments:saved.assessments.map(item => ({...item,teacher:teacherName}))};
     }
     const legacy = JSON.parse(localStorage.getItem(ASSESSMENT_KEY));
     if (legacy) {
       const migrated = {...legacy,id:legacy.id || crypto.randomUUID(),choices:legacy.choices || {}};
-      return {rubricTitle:migrated.rubricTitle || '',className:'',teacherName:String(migrated.teacher || '').slice(0,80),activeId:migrated.id,assessments:[migrated]};
+      return {rubricTitle:migrated.rubricTitle || '',subjectType:'student',className:'',teacherName:String(migrated.teacher || '').slice(0,80),activeId:migrated.id,assessments:[migrated]};
     }
   } catch {}
   const first = blankAssessment();
-  return {rubricTitle:'',className:'',teacherName:'',activeId:first.id,assessments:[first]};
+  return {rubricTitle:'',subjectType:'student',className:'',teacherName:'',activeId:first.id,assessments:[first]};
 }
 
 function activeAssessment() {
@@ -92,7 +158,7 @@ function saveAssessmentBook() {
 function resetAssessmentBook() {
   studentRenameMode = false;
   const first = blankAssessment(); first.rubricTitle = state.title;
-  assessmentBook = {rubricTitle:state.title,className:'',teacherName:'',activeId:first.id,assessments:[first]};
+  assessmentBook = {rubricTitle:state.title,subjectType:'student',className:'',teacherName:'',activeId:first.id,assessments:[first]};
   assessment = first; saveAssessmentBook();
 }
 
@@ -113,14 +179,15 @@ function restoreAssessmentExport(payload) {
   const teacherName = String(payload.teacherName ?? restored.find(item => item.teacher)?.teacher ?? '').slice(0,80);
   restored.forEach(item => { item.teacher = teacherName; });
   if (!restored.length) restored.push(blankAssessment(teacherName));
-  assessmentBook = {rubricTitle:state.title,className:String(payload.className ?? '').slice(0,60),teacherName,activeId:restored[0].id,assessments:restored};
+  assessmentBook = {rubricTitle:state.title,subjectType:payload.subjectType === 'group' ? 'group' : 'student',className:String(payload.className ?? '').slice(0,60),teacherName,activeId:restored[0].id,assessments:restored};
   assessment = restored[0]; studentRenameMode = false; sharedLinkMode = false;
   localStorage.setItem(STORAGE_KEY,JSON.stringify(state)); saveAssessmentBook(); renderEditor(); applyTheme();
 }
 
 function importRubricOnly(payload) {
+  const subjectType = payload?.subjectType === 'group' ? 'group' : 'student';
   state = normalizeState(payload.rubric || payload); sharedLinkMode = false;
-  resetAssessmentBook(); renderEditor(); applyTheme(); scheduleSave();
+  resetAssessmentBook(); setSubjectType(subjectType); renderEditor(); applyTheme(); scheduleSave();
 }
 
 function restoreStudentList(payload) {
@@ -134,6 +201,7 @@ function restoreStudentList(payload) {
   restored.forEach(item => { item.rubricTitle = state.title; });
   assessmentBook = {
     rubricTitle:state.title,
+    subjectType:payload?.subjectType === 'group' ? 'group' : 'student',
     className:String(payload?.className || '').slice(0,60),
     teacherName:defaultTeacher,
     activeId:restored[0].id,
@@ -214,15 +282,17 @@ function formatMagisterNames(students, useFullNames) {
   });
 }
 
-function importMagisterStudents(useFullNames) {
+function importMagisterStudents(nameMode) {
   if (!pendingMagisterImport) return;
   const {students,className,returnView} = pendingMagisterImport;
-  const names = formatMagisterNames(students, useFullNames);
-  const addedCount = restoreStudentList({type:'rubricbouwer-leerlingen',className,students:names});
+  const names = nameMode === 'groups'
+    ? students.map(student => student.firstName.slice(0,60))
+    : formatMagisterNames(students, nameMode === 'full');
+  const addedCount = restoreStudentList({type:'rubricbouwer-leerlingen',subjectType:nameMode === 'groups' ? 'group' : 'student',className,students:names});
   closeMagisterImportDialog();
   if (returnView === 'fill') renderFill();
   if (returnView === 'overview') renderClassOverview();
-  showToast(`${addedCount} leerlingen uit Magister geopend.`);
+  showToast(`${addedCount} ${nameMode === 'groups' ? 'groepen' : 'leerlingen'} uit Magister geopend.`);
 }
 
 function closeAssessmentImportDialog() {
@@ -242,11 +312,15 @@ function prepareImport(payload, returnView = 'editor') {
   $('#assessmentStudentListWarning').hidden = !hasStudentList || !assessmentBook.assessments.some(assessmentHasContent);
   if (isFull) {
     const count = payload.assessments.length;
-    $('#assessmentImportSummary').textContent = `Dit bestand bevat een rubric, een leerlinglijst en ${count} beoordeling${count === 1 ? '' : 'en'}.`;
+    const terms = payload.subjectType === 'group' ? {list:'groepenlijst',subjects:'groepen'} : {list:'leerlinglijst',subjects:'leerlingen'};
+    $('#assessmentImportSummary').textContent = `Dit bestand bevat een rubric, een ${terms.list} en ${count} beoordeling${count === 1 ? '' : 'en'}.`;
   } else if (isStudentList) {
-    $('#assessmentImportSummary').textContent = `Dit bestand bevat een leerlinglijst met ${payload.students.length} leerling${payload.students.length === 1 ? '' : 'en'}.`;
+    const group = payload.subjectType === 'group';
+    $('#assessmentImportSummary').textContent = `Dit bestand bevat een ${group ? 'groepenlijst' : 'leerlinglijst'} met ${payload.students.length} ${group ? (payload.students.length === 1 ? 'groep' : 'groepen') : (payload.students.length === 1 ? 'leerling' : 'leerlingen')}.`;
   } else {
-    $('#assessmentImportSummary').textContent = 'Dit bestand bevat alleen een rubric.';
+    $('#assessmentImportSummary').textContent = payload.subjectType
+      ? `Dit bestand bevat alleen een rubric voor ${payload.subjectType === 'group' ? 'groepen' : 'losse leerlingen'}.`
+      : 'Dit bestand bevat alleen een rubric. Omdat geen stand is opgeslagen, wordt uitgegaan van losse leerlingen.';
   }
   $('#assessmentImportDialog').showModal();
 }
@@ -309,6 +383,8 @@ function criterionTemplate(item, index) {
 
 function renderEditor() {
   $('#rubricTitle').value = state.title;
+  $('#subjectTypeStudent').checked = assessmentBook.subjectType !== 'group';
+  $('#subjectTypeGroup').checked = assessmentBook.subjectType === 'group';
   state.levelNames.forEach((name, i) => $(`#level${i + 1}Name`).value = name);
   list.innerHTML = state.criteria.map(criterionTemplate).join('');
   updateSummary();
@@ -478,6 +554,10 @@ list.addEventListener('click', event => {
   });
 });
 
+document.querySelectorAll('input[name="subjectType"]').forEach(input => {
+  input.addEventListener('change', event => setSubjectType(event.target.value));
+});
+
 function gradeBands(max) {
   return Array.from({length: 19}, (_, i) => {
     const grade = 1 + i * .5;
@@ -612,7 +692,7 @@ async function exportSettings() {
   const fileName = `${slug(state.title) || 'rubric'}.rubric`;
   const target = await chooseSaveTarget(fileName,SAVE_FILE_TYPES.rubric);
   if (!target) return;
-  const data = JSON.stringify({...state, exportedAt: new Date().toISOString()}, null, 2);
+  const data = JSON.stringify({...state, subjectType:assessmentBook.subjectType === 'group' ? 'group' : 'student', exportedAt: new Date().toISOString()}, null, 2);
   const blob = new Blob([data], {type:'application/octet-stream'});
   try { showSaveToast(await saveBlob(blob,target),'Rubric opgeslagen.'); }
   catch (error) { console.error(error); showToast('Opslaan is niet gelukt.'); }
@@ -621,6 +701,7 @@ async function exportSettings() {
 function studentListExportData() {
   return {
     type:'rubricbouwer-leerlingen',version:1,exportedAt:new Date().toISOString(),
+    subjectType:assessmentBook.subjectType === 'group' ? 'group' : 'student',
     className:assessmentBook.className || '',
     students:assessmentBook.assessments.map(item => item.student.trim()).filter(Boolean)
   };
@@ -632,22 +713,26 @@ function assessmentHasContent(item) {
 
 async function downloadStudentList() {
   const data = studentListExportData();
-  if (!data.students.length) { showToast('Vul eerst minimaal één leerlingnaam in.'); return; }
+  const terms = subjectTerms();
+  if (!data.students.length) { showToast(`Vul eerst minimaal één ${terms.singular}naam in.`); return; }
   const className = safeName(data.className) || 'Klas';
-  const fileName = `Leerlinglijst ${className}.rubric`;
+  const listName = assessmentBook.subjectType === 'group' ? 'Groepenlijst' : 'Leerlinglijst';
+  const fileName = `${listName} ${className}.rubric`;
   const target = await chooseSaveTarget(fileName,SAVE_FILE_TYPES.rubric);
   if (!target) return;
   const blob = new Blob([JSON.stringify(data,null,2)],{type:'application/octet-stream'});
-  try { showSaveToast(await saveBlob(blob,target),'Leerlinglijst opgeslagen.'); }
+  try { showSaveToast(await saveBlob(blob,target),`${listName} opgeslagen.`); }
   catch (error) { console.error(error); showToast('Opslaan is niet gelukt.'); }
 }
 
 function openRubricExportDialog() {
+  updateSubjectTerminology();
   const relevant = assessmentBook.assessments.filter(assessmentHasContent);
   if (!relevant.length) { exportSettings(); return; }
   const studentCount = relevant.filter(item => item.student.trim()).length;
   const completedCount = relevant.filter(item => isAssessmentComplete(item)).length;
-  $('#rubricExportAssessmentCount').textContent = `${studentCount} leerling${studentCount === 1 ? '' : 'en'} en ${completedCount} volledige beoordeling${completedCount === 1 ? '' : 'en'}`;
+  const terms = subjectTerms();
+  $('#rubricExportAssessmentCount').textContent = `${studentCount} ${studentCount === 1 ? terms.singular : terms.plural} en ${completedCount} volledige beoordeling${completedCount === 1 ? '' : 'en'}`;
   $('#exportStudentListOnly').disabled = studentCount === 0;
   $('#rubricExportDialog').showModal();
 }
@@ -670,7 +755,7 @@ function buildPdf(valid, max, currentAssessment = null) {
   if (isAssessmentComplete(currentAssessment,valid)) { pdf.setTextColor(...navy); pdf.setFont('helvetica','bold'); pdf.setFontSize(12); pdf.text(gradeFor(assessmentScore(valid,currentAssessment),max).toFixed(1).replace('.',','),271,15.7,{align:'center'}); }
   const comment = String(currentAssessment?.comment || '').trim().replace(/\s+/g, ' ');
   pdf.setDrawColor(82,101,109); pdf.setLineWidth(.25);
-  pdf.text('Naam leerling', 14, 35); pdf.line(41, 35, 142, 35);
+  pdf.text(`Naam ${subjectTerms().singular}`, 14, 35); pdf.line(41, 35, 142, 35);
   pdf.text('Docent', 154, 35); pdf.line(169, 35, 283, 35);
   if (currentAssessment) { pdf.setFont('helvetica','normal'); pdf.setTextColor(...navy); pdf.text(currentAssessment.student || '',43,34); pdf.text(currentAssessment.teacher || '',171,34); }
   if (comment) {
@@ -818,6 +903,7 @@ function sortAssessmentsByStudentName() {
 
 function renderFill() {
   const valid = validCriteria();
+  updateSubjectTerminology();
   $('#fillPageTitle').textContent = state.title || 'Naamloze rubric';
   sortAssessmentsByStudentName();
   const activeIndex = assessmentBook.assessments.findIndex(item => item.id === assessment.id);
@@ -825,7 +911,7 @@ function renderFill() {
     const complete = valid.length && valid.every(criterion => Number.isInteger(item.choices?.[criterion.id]));
     return `<option value="${escapeHtml(item.id)}" ${item.id === assessment.id ? 'selected' : ''}>${complete ? '✓' : '○'} ${index + 1}. ${escapeHtml(item.student || 'Naam nog invullen')}</option>`;
   }).join('');
-  $('#studentCounter').textContent = `Leerling ${activeIndex + 1} van ${assessmentBook.assessments.length}`;
+  $('#studentCounter').textContent = `${subjectTerms().Singular} ${activeIndex + 1} van ${assessmentBook.assessments.length}`;
   $('#removeStudentButton').disabled = assessmentBook.assessments.length === 1;
   $('#className').value = assessmentBook.className || '';
   $('#teacherName').value = assessmentBook.teacherName || '';
@@ -866,6 +952,7 @@ function saveStudentRename() {
 }
 
 function openSharedAssessment(currentAssessment) {
+  updateSubjectTerminology();
   const valid = validCriteria();
   const complete = isAssessmentComplete(currentAssessment, valid);
   const answered = valid.filter(item => Number.isInteger(currentAssessment.choices?.[item.id])).length;
@@ -933,6 +1020,7 @@ function namedAssessments() {
 }
 
 function openAssessmentDownloadDialog() {
+  updateSubjectTerminology();
   const valid = validCriteria(), named = namedAssessments();
   const completed = named.filter(item => isAssessmentComplete(item,valid));
   $('#completedAssessmentDownloadCount').textContent = `(${completed.length})`;
@@ -955,13 +1043,23 @@ function openResultsPdfDialog() {
 
 function closeResultsPdfDialog() { $('#resultsPdfDialog').close(); }
 
+function openResultsCsvDialog() {
+  $('#csvIncludePoints').checked = true;
+  $('#csvIncludeComments').checked = true;
+  $('#csvIncludeShareLinks').checked = true;
+  $('#resultsCsvDialog').showModal();
+}
+
+function closeResultsCsvDialog() { $('#resultsCsvDialog').close(); }
+
 async function downloadAssessmentPdfs(includeIncomplete) {
   const valid = validCriteria(), named = namedAssessments();
   const completed = named.filter(item => isAssessmentComplete(item,valid));
   const selected = includeIncomplete ? named : completed;
-  if (!selected.length) { showToast(includeIncomplete ? 'Vul eerst minimaal één leerlingnaam in.' : 'Rond eerst minimaal één beoordeling volledig af.'); return; }
+  const terms = subjectTerms();
+  if (!selected.length) { showToast(includeIncomplete ? `Vul eerst minimaal één ${terms.singular}naam in.` : `Rond eerst minimaal één beoordeling van een ${terms.singular} volledig af.`); return; }
   const folderName = assessmentFileBase();
-  const suffix = includeIncomplete ? 'alle leerling-PDF’s' : 'voltooide leerling-PDF’s';
+  const suffix = includeIncomplete ? `alle ${terms.singular}-PDF’s` : `voltooide ${terms.singular}-PDF’s`;
   const target = await chooseSaveTarget(`${folderName} - ${suffix}.zip`,SAVE_FILE_TYPES.zip);
   if (!target) return;
   const button = $('#downloadAllButton');
@@ -970,20 +1068,20 @@ async function downloadAssessmentPdfs(includeIncomplete) {
     const zip = new JSZip(), folder = zip.folder(folderName);
     selected.forEach((item,index) => {
       const order = String(index + 1).padStart(2,'0');
-      folder.file(`${order} - ${safeName(item.student) || `Leerling ${index + 1}`}.pdf`, buildPdf(valid,maxPoints(valid),item).output('arraybuffer'));
+      folder.file(`${order} - ${safeName(item.student) || `${terms.Singular} ${index + 1}`}.pdf`, buildPdf(valid,maxPoints(valid),item).output('arraybuffer'));
     });
     folder.file(`${folderName} - beoordelingen.rubric`, JSON.stringify(assessmentExportData(), null, 2));
     const blob = await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}});
     const result = await saveBlob(blob,target);
-    showSaveToast(result,`${selected.length} leerling-PDF${selected.length === 1 ? '' : '’s'} en het klasbestand opgeslagen.`);
+    showSaveToast(result,`${selected.length} ${terms.singular}-PDF${selected.length === 1 ? '' : '’s'} en het klasbestand opgeslagen.`);
   } catch (error) { console.error(error); showToast('De gezamenlijke download is niet gelukt.'); }
   finally { button.disabled = false; button.removeAttribute('aria-busy'); }
 }
 
 async function downloadSingleAssessmentPdf(targetAssessment, requireComplete = false) {
   const valid = validCriteria();
-  if (!targetAssessment?.student?.trim()) { showToast('Vul eerst de naam van de leerling in.'); return; }
-  if (requireComplete && !isAssessmentComplete(targetAssessment,valid)) { showToast('Vul eerst alle criteria voor deze leerling in.'); return; }
+  if (!targetAssessment?.student?.trim()) { showToast(`Vul eerst de naam van de ${subjectTerms().singular} in.`); return; }
+  if (requireComplete && !isAssessmentComplete(targetAssessment,valid)) { showToast(`Vul eerst alle criteria voor deze ${subjectTerms().singular} in.`); return; }
   const fileName = `${assessmentFileBase()} - ${safeName(targetAssessment.student)}.pdf`;
   const target = await chooseSaveTarget(fileName,SAVE_FILE_TYPES.pdf);
   if (!target) return;
@@ -995,7 +1093,7 @@ function gradeListData() {
   const valid = validCriteria(), max = maxPoints(valid);
   const rows = namedAssessments().map(item => {
     const total = assessmentScore(valid,item), complete = isAssessmentComplete(item,valid);
-    return {id:item.id,student:item.student,total,max,complete,grade:complete ? gradeFor(total,max) : null,comment:String(item.comment || '').trim()};
+    return {id:item.id,student:item.student,total,max,complete,grade:complete ? gradeFor(total,max) : null,comment:String(item.comment || '').trim(),assessment:item};
   });
   const completed = rows.filter(item => item.complete);
   const sufficient = completed.filter(item => item.grade >= 5.5).length;
@@ -1010,6 +1108,7 @@ function gradeListData() {
 }
 
 function renderClassOverview() {
+  updateSubjectTerminology();
   const data = gradeListData(), valid = validCriteria(), named = namedAssessments();
   $('#resultsPageTitle').textContent = state.title || 'Naamloze rubric';
   const percentage = value => data.completedCount ? Math.round(value / data.completedCount * 100) : 0;
@@ -1024,7 +1123,7 @@ function renderClassOverview() {
   },new Map());
   const gradeEntries = [...gradeCounts.entries()].sort((left,right) => Number(left[0].replace(',','.')) - Number(right[0].replace(',','.')));
   const largestGradeCount = Math.max(0,...gradeEntries.map(([,count]) => count));
-  $('#gradeDistribution').innerHTML = gradeEntries.length ? gradeEntries.map(([grade,count]) => `<div class="distribution-row"><span>${escapeHtml(grade)}</span><div class="distribution-track"><div class="distribution-bar" data-width="${count/largestGradeCount*100}"></div></div><b>${count}</b></div>`).join('') : '<p class="overview-empty">Er zijn nog geen volledig beoordeelde leerlingen.</p>';
+  $('#gradeDistribution').innerHTML = gradeEntries.length ? gradeEntries.map(([grade,count]) => `<div class="distribution-row"><span>${escapeHtml(grade)}</span><div class="distribution-track"><div class="distribution-bar" data-width="${count/largestGradeCount*100}"></div></div><b>${count}</b></div>`).join('') : `<p class="overview-empty">Er zijn nog geen volledig beoordeelde ${subjectTerms().plural}.</p>`;
   $('#gradeDistribution').querySelectorAll('[data-width]').forEach(bar => { bar.style.width = `${bar.dataset.width}%`; });
 
   $('#criteriaAnalysisLegend').innerHTML = state.levelNames.map((name,index) => `<span><i class="analysis-level-${index}"></i>${escapeHtml(name.trim() || `Niveau ${index + 1}`)}</span>`).join('');
@@ -1045,7 +1144,7 @@ function renderClassOverview() {
     const id = item.id || '';
     const grade = item.grade === null ? '' : item.grade.toFixed(1).replace('.',',');
     return `<tr><td><button class="student-row-link" type="button" data-action="open" data-id="${escapeHtml(id)}">${escapeHtml(item.student)}</button></td><td>${item.total}/${item.max}</td><td>${grade}</td><td>${escapeHtml(item.comment)}</td><td><div class="grade-row-actions"><button type="button" data-action="pdf" data-id="${escapeHtml(id)}" aria-label="PDF van ${escapeHtml(item.student)} downloaden" title="PDF downloaden"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6M12 11v7m-3-3 3 3 3-3"/></svg></button><button type="button" data-action="share" data-id="${escapeHtml(id)}" aria-label="Deellink voor ${escapeHtml(item.student)} kopiëren" title="Deellink kopiëren"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 10.5 6.8-4M8.6 13.5l6.8 4"/></svg></button></div></td></tr>`;
-  }).join('') : '<tr><td colspan="5"><p class="overview-empty">Voeg eerst leerlingen toe bij Invullen.</p></td></tr>';
+  }).join('') : `<tr><td colspan="5"><p class="overview-empty">Voeg eerst ${subjectTerms().plural} toe bij Invullen.</p></td></tr>`;
 }
 
 function gradeListFileBase() {
@@ -1133,7 +1232,7 @@ function addGradeListPdfPage(pdf, addPage = false) {
   const data = gradeListData(), navy = [18,61,85];
   drawResultsPdfHeader(pdf,'Cijferlijst');
   pdf.autoTable({
-    startY:33,head:[['Leerling','Punten','Cijfer','Opmerking']],
+    startY:33,head:[[subjectTerms().Singular,'Punten','Cijfer','Opmerking']],
     body:data.rows.map(item => [item.student,`${item.total}/${item.max}`,item.grade === null ? '' : item.grade.toFixed(1).replace('.',','),item.comment]),
     margin:{left:14,right:14,bottom:12},
     styles:{font:'helvetica',fontSize:8,cellPadding:2.5,valign:'middle',lineColor:[203,211,214],lineWidth:.2,textColor:[24,48,62],overflow:'hidden'},
@@ -1172,9 +1271,18 @@ function csvCell(value) {
   return `"${String(value ?? '').replace(/"/g,'""')}"`;
 }
 
-async function downloadGradeListCsv() {
+async function downloadGradeListCsv(options = {}) {
+  const {includePoints = true,includeComments = true,includeShareLinks = true} = options;
   const data = gradeListData();
-  const lines = [['Leerling','Punten','Cijfer','Opmerking'],...data.rows.map(item => [item.student,`${item.total}/${item.max}`,item.grade === null ? '' : item.grade.toFixed(1).replace('.',','),item.comment])];
+  const columns = [
+    {heading:subjectTerms().Singular,value:item => item.student},
+    ...(includePoints ? [{heading:'Punten',value:item => `${item.total}/${item.max}`}] : []),
+    {heading:'Cijfer',value:item => item.grade === null ? '' : item.grade.toFixed(1).replace('.',',')},
+    ...(includeComments ? [{heading:'Opmerking',value:item => item.comment}] : []),
+    ...(includeShareLinks ? [{heading:'Deellink',value:item => createShareUrl(item.assessment)}] : [])
+  ];
+  const lines = [columns.map(column => column.heading)];
+  for (const item of data.rows) lines.push(await Promise.all(columns.map(column => column.value(item))));
   const blob = new Blob([`\uFEFF${lines.map(row => row.map(csvCell).join(';')).join('\r\n')}`],{type:'text/csv;charset=utf-8'});
   const target = await chooseSaveTarget(`${gradeListFileBase()}.csv`,SAVE_FILE_TYPES.csv);
   if (!target) return;
@@ -1185,7 +1293,7 @@ async function downloadGradeListCsv() {
 function assessmentExportData() {
   const valid = validCriteria(), max = maxPoints(valid);
   return {
-    type:'rubricbouwer-beoordelingen',version:1,exportedAt:new Date().toISOString(),className:assessmentBook.className || '',teacherName:assessmentBook.teacherName || '',
+    type:'rubricbouwer-beoordelingen',version:1,exportedAt:new Date().toISOString(),subjectType:assessmentBook.subjectType === 'group' ? 'group' : 'student',className:assessmentBook.className || '',teacherName:assessmentBook.teacherName || '',
     rubric:{version:state.version,title:state.title,levelNames:state.levelNames,criteria:state.criteria},
     assessments:assessmentBook.assessments.filter(assessmentHasContent).map(item => {
       const answered = valid.filter(criterion => Number.isInteger(item.choices?.[criterion.id])).length;
@@ -1221,15 +1329,19 @@ async function gzipDecode(value) {
 
 async function makeShareLink(includeAssessment, allowIncomplete = false, targetAssessment = assessment) {
   try {
-    if (includeAssessment && !allowIncomplete && !targetAssessment.student.trim()) { showToast('Vul eerst de voornaam van de leerling in.'); return; }
-    if (includeAssessment && !allowIncomplete && !isAssessmentComplete(targetAssessment)) { showToast('Vul eerst alle criteria voor deze leerling in.'); return; }
-    const sharedState = {version:state.version,title:state.title,levelNames:state.levelNames,criteria:state.criteria};
-    const payload = {v:1,r:sharedState,...(includeAssessment ? {a:targetAssessment} : {})};
-    const encoded = await gzipEncode(JSON.stringify(payload));
-    const url = `${location.origin}${location.pathname}#rubric=v1.${encoded}`;
+    if (includeAssessment && !allowIncomplete && !targetAssessment.student.trim()) { showToast(`Vul eerst de naam van de ${subjectTerms().singular} in.`); return; }
+    if (includeAssessment && !allowIncomplete && !isAssessmentComplete(targetAssessment)) { showToast(`Vul eerst alle criteria voor deze ${subjectTerms().singular} in.`); return; }
+    const url = await createShareUrl(includeAssessment ? targetAssessment : null);
     await navigator.clipboard.writeText(url);
-    showToast(`${includeAssessment ? 'Deellink voor leerling' : 'Deellink naar rubric'} gekopieerd (${url.length} tekens).`);
+    showToast(`${includeAssessment ? `Deellink voor ${subjectTerms().singular}` : 'Deellink naar rubric'} gekopieerd (${url.length} tekens).`);
   } catch (error) { console.error(error); showToast('Deellink maken is niet gelukt.'); }
+}
+
+async function createShareUrl(targetAssessment = null) {
+  const sharedState = {version:state.version,title:state.title,levelNames:state.levelNames,criteria:state.criteria};
+  const payload = {v:1,r:sharedState,s:assessmentBook.subjectType === 'group' ? 'group' : 'student',...(targetAssessment ? {a:targetAssessment} : {})};
+  const encoded = await gzipEncode(JSON.stringify(payload));
+  return `${location.origin}${location.pathname}#rubric=v1.${encoded}`;
 }
 
 function requestStudentShareLink(targetAssessment = assessment) {
@@ -1247,7 +1359,7 @@ async function loadSharedLink() {
   const match = location.hash.match(/^#rubric=v1\.([A-Za-z0-9_-]+)$/); if (!match) return;
   try {
     const payload = JSON.parse(await gzipDecode(match[1]));
-    state = normalizeState(payload.r); sharedLinkMode = true; renderEditor();
+    state = normalizeState(payload.r); sharedLinkMode = true; assessmentBook.subjectType = payload.s === 'group' ? 'group' : 'student'; renderEditor();
     if (payload.a) assessment = {...payload.a,comment:String(payload.a.comment || '').slice(0,160),choices:payload.a.choices || {}};
     if (payload.a) openSharedAssessment(assessment);
     else {
@@ -1324,7 +1436,7 @@ $('#importFile').addEventListener('change', async event => {
     if (file.name.toLocaleLowerCase('nl-NL').endsWith('.csv') || file.type === 'text/csv') prepareMagisterImport(text, returnView);
     else prepareImport(JSON.parse(text), returnView);
   }
-  catch { showToast('Dit bestand is geen geldige rubric, leerlinglijst, klasbestand of Magister-CSV.'); }
+  catch { showToast('Dit bestand is geen geldige rubric, leerling- of groepenlijst, klasbestand of Magister-CSV.'); }
   event.target.value = '';
 });
 
@@ -1337,31 +1449,53 @@ $('#cancelAssessmentImport').addEventListener('click', closeAssessmentImportDial
 $('#assessmentImportDialog').addEventListener('cancel', () => { pendingAssessmentImport = null; pendingImportReturnView = 'editor'; });
 $('#cancelMagisterImport').addEventListener('click', closeMagisterImportDialog);
 $('#magisterImportDialog').addEventListener('cancel', closeMagisterImportDialog);
-$('#importMagisterFirstNames').addEventListener('click', () => importMagisterStudents(false));
-$('#importMagisterFullNames').addEventListener('click', () => importMagisterStudents(true));
+$('#importMagisterFirstNames').addEventListener('click', () => importWithMatchingSubjectType('student', () => importMagisterStudents('first')));
+$('#importMagisterFullNames').addEventListener('click', () => importWithMatchingSubjectType('student', () => importMagisterStudents('full')));
+$('#importMagisterGroups').addEventListener('click', () => importWithMatchingSubjectType('group', () => importMagisterStudents('groups')));
+$('#cancelSubjectTypeMismatch').addEventListener('click', closeSubjectTypeMismatchDialog);
+$('#subjectTypeMismatchDialog').addEventListener('cancel', closeSubjectTypeMismatchDialog);
+$('#confirmSubjectTypeMismatch').addEventListener('click', () => {
+  if (!pendingSubjectTypeImport) return;
+  const {targetType,action} = pendingSubjectTypeImport;
+  pendingSubjectTypeImport = null;
+  $('#subjectTypeMismatchDialog').close();
+  setSubjectType(targetType);
+  action();
+});
 $('#importRubricOnly').addEventListener('click', () => {
   if (!pendingAssessmentImport) return;
-  const payload = pendingAssessmentImport, returnView = pendingImportReturnView;
-  importRubricOnly(payload); closeAssessmentImportDialog();
-  if (returnView === 'fill') renderFill();
-  if (returnView === 'overview') renderClassOverview();
-  showToast('Alleen de rubric is geopend.');
+  const payload = pendingAssessmentImport;
+  const openRubric = () => {
+    const returnView = pendingImportReturnView;
+    importRubricOnly(payload); closeAssessmentImportDialog();
+    if (returnView === 'fill') renderFill();
+    if (returnView === 'overview') renderClassOverview();
+    showToast('Alleen de rubric is geopend.');
+  };
+  importWithMatchingSubjectType(payload.subjectType === 'group' ? 'group' : 'student', openRubric);
 });
 $('#importStudentListOnly').addEventListener('click', () => {
   if (!pendingAssessmentImport) return;
-  const payload = pendingAssessmentImport, returnView = pendingImportReturnView;
-  const addedCount = restoreStudentList(payload); closeAssessmentImportDialog();
-  if (returnView === 'fill') renderFill();
-  if (returnView === 'overview') renderClassOverview();
-  showToast(`${addedCount} leerlingen geopend. De rubric is behouden.`);
+  const payload = pendingAssessmentImport;
+  importWithMatchingSubjectType(payload.subjectType, () => {
+    const returnView = pendingImportReturnView;
+    const addedCount = restoreStudentList(payload); closeAssessmentImportDialog();
+    if (returnView === 'fill') renderFill();
+    if (returnView === 'overview') renderClassOverview();
+    const terms = subjectTerms();
+    showToast(`${addedCount} ${addedCount === 1 ? terms.singular : terms.plural} geopend. De rubric is behouden.`);
+  });
 });
 $('#importRubricAndAssessments').addEventListener('click', () => {
   if (!pendingAssessmentImport) return;
-  const payload = pendingAssessmentImport, returnView = pendingImportReturnView;
-  restoreAssessmentExport(payload); closeAssessmentImportDialog();
-  if (returnView === 'fill') renderFill();
-  if (returnView === 'overview') renderClassOverview();
-  showToast(`${assessmentBook.assessments.length} beoordelingen geopend.`);
+  const payload = pendingAssessmentImport;
+  importWithMatchingSubjectType(payload.subjectType, () => {
+    const returnView = pendingImportReturnView;
+    restoreAssessmentExport(payload); closeAssessmentImportDialog();
+    if (returnView === 'fill') renderFill();
+    if (returnView === 'overview') renderClassOverview();
+    showToast(`${assessmentBook.assessments.length} beoordelingen geopend.`);
+  });
 });
 $('#helpButton').addEventListener('click', openHelp);
 $('#closeHelpButton').addEventListener('click', closeHelp);
@@ -1386,7 +1520,7 @@ $('#mobileCloseFillButton').addEventListener('click', closeFill);
 $('#mobileCloseClassOverviewButton').addEventListener('click', closeClassOverview);
 $('#classOverviewButton').addEventListener('click', openClassOverview);
 $('#classOverviewPdfButton').addEventListener('click', openResultsPdfDialog);
-$('#classOverviewCsvButton').addEventListener('click', downloadGradeListCsv);
+$('#classOverviewCsvButton').addEventListener('click', openResultsCsvDialog);
 $('#overviewHelpButton').addEventListener('click', openHelp);
 $('#overviewThemeToggle').addEventListener('click', toggleTheme);
 $('#overviewImportButton').addEventListener('click', () => $('#importFile').click());
@@ -1423,6 +1557,14 @@ $('#resultsPdfDialog').addEventListener('cancel', closeResultsPdfDialog);
 $('#downloadResultsListOnly').addEventListener('click', () => { closeResultsPdfDialog(); downloadGradeListPdf('list'); });
 $('#downloadResultsWithStats').addEventListener('click', () => { closeResultsPdfDialog(); downloadGradeListPdf('both'); });
 $('#downloadResultsStatsOnly').addEventListener('click', () => { closeResultsPdfDialog(); downloadGradeListPdf('stats'); });
+$('#cancelResultsCsv').addEventListener('click', closeResultsCsvDialog);
+$('#resultsCsvDialog').addEventListener('cancel', closeResultsCsvDialog);
+$('#resultsCsvForm').addEventListener('submit', event => {
+  event.preventDefault();
+  const options = {includePoints:$('#csvIncludePoints').checked,includeComments:$('#csvIncludeComments').checked,includeShareLinks:$('#csvIncludeShareLinks').checked};
+  closeResultsCsvDialog();
+  downloadGradeListCsv(options);
+});
 $('#filledPdfButton').addEventListener('click', () => downloadSingleAssessmentPdf(assessment,true));
 $('#webGradeListBody').addEventListener('click', event => {
   const button = event.target.closest('button[data-action][data-id]'); if (!button) return;
@@ -1450,7 +1592,7 @@ $('#mobileNewRubricButton').addEventListener('click', startNewRubric);
 $('#mobilePreviewButton').addEventListener('click', () => openPreview());
 $('#mobileShareFilledButton').addEventListener('click', () => requestStudentShareLink());
 $('#mobileFilledPdfButton').addEventListener('click', () => downloadSingleAssessmentPdf(assessment,true));
-$('#mobileCsvButton').addEventListener('click', downloadGradeListCsv);
+$('#mobileCsvButton').addEventListener('click', openResultsCsvDialog);
 $('#mobileResultsPdfButton').addEventListener('click', openResultsPdfDialog);
 $('#dismissLinkLengthWarning').addEventListener('click', () => {
   if ($('#hideLinkLengthWarning').checked) localStorage.setItem(LINK_LENGTH_WARNING_KEY, 'hidden');

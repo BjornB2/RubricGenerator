@@ -22,7 +22,7 @@
   <meta name="twitter:description" content="Ontwerp duidelijke rubrics, beoordeel leerlingen online en download printklare PDF’s, volledig in je eigen browser.">
   <meta name="twitter:image" content="https://onlinerubric.nl/og.png">
   <title>OnlineRubric</title>
-  <link rel="stylesheet" href="styles.css?v=48">
+  <link rel="stylesheet" href="styles.css?v=51">
 </head>
 <body>
   <header class="app-header no-print">
@@ -103,6 +103,13 @@
         <label class="field field-wide">Naam van het project
           <input id="rubricTitle" type="text" maxlength="120" placeholder="Bijvoorbeeld: Krukje">
         </label>
+        <fieldset class="field field-wide subject-type-field">
+          <legend>Deze rubric is voor</legend>
+          <div class="subject-type-options">
+            <label><input type="radio" name="subjectType" value="student" id="subjectTypeStudent"> Losse leerlingen</label>
+            <label><input type="radio" name="subjectType" value="group" id="subjectTypeGroup"> Groepen</label>
+          </div>
+        </fieldset>
         <label class="field">Niveau 1
           <input id="level1Name" type="text" maxlength="40" placeholder="Onvoldoende">
         </label>
@@ -163,7 +170,7 @@
       </ol>
 
       <section class="help-grid">
-        <article><h2>Leerlinglijsten openen</h2><p>Voeg leerlingen één voor één toe met <strong>Nieuwe leerling</strong> of open een opgeslagen leerlinglijst. Je kunt ook rechtstreeks een Magister-export als CSV-bestand gebruiken en kiezen voor alleen roepnamen of volledige namen. Vul klas en docent één keer in voor de hele lijst. De rubric blijft behouden; de geopende leerlinglijst vervangt wel de huidige leerlinglijst en beoordelingen.</p></article>
+        <article><h2>Bestanden openen</h2><p>Gebruik voor alle ondersteunde bestanden dezelfde knop <strong>Bestand openen</strong>: bestaande rubrics, opgeslagen leerling- of groepenlijsten, complete klasbestanden én CSV-exports uit Magister. Bij een Magister-CSV kies je daarna voor voornamen, volledige namen of groepsnamen. Een geopende leerling- of groepenlijst vervangt de huidige lijst en beoordelingen, maar behoudt de openstaande rubric.</p></article>
         <article><h2>Delen met een collega</h2><p>Sla de rubric op als <strong>.rubric</strong>-bestand en deel dat bestand met je collega. De collega kan het bestand in OnlineRubric openen en krijgt een eigen lokale kopie om verder te bewerken.</p></article>
         <article><h2>Delen met een leerling</h2><p><strong>Deellink voor leerling</strong> maakt een alleen-lezen weergave. Zo kun je vooraf de lege rubric delen en later het resultaat met de eventuele toelichting. Bij een onvolledige rubric volgt eerst een waarschuwing. De leerling krijgt geen toegang tot de editor of andere leerlingen.</p></article>
         <article><h2>Bewaren en openen</h2><p>Je werk wordt automatisch in deze browser bewaard. Met <strong>Bestand opslaan</strong> en <strong>Bestand openen</strong> kun je een rubric, een leerlinglijst of alles inclusief beoordelingen bewaren en later weer gebruiken. Een losse leerlinglijst vervangt de huidige leerlinglijst, maar niet de openstaande rubric.</p></article>
@@ -222,7 +229,7 @@
         <div class="header-grade"><strong>Eindcijfer</strong><span id="previewGrade"></span></div>
       </header>
       <div class="identity-row">
-        <label>Naam leerling <span><em id="previewStudent"></em></span></label>
+        <label><span id="previewSubjectNameLabel">Naam leerling</span> <span><em id="previewStudent"></em></span></label>
         <label>Docent <span><em id="previewTeacher"></em></span></label>
       </div>
       <p class="preview-comment" id="previewComment" hidden><strong>Toelichting:</strong> <span id="previewCommentText"></span></p>
@@ -250,7 +257,7 @@
       </nav>
       <div class="fill-toolbar-title"><strong>OnlineRubric</strong><small>ontwerpen, beoordelen en delen</small></div>
       <div class="fill-toolbar-actions">
-        <button class="button button-dark button-with-icon" id="shareFilledButton"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 10.5 6.8-4M8.6 13.5l6.8 4"/></svg><span>Deellink voor leerling</span></button>
+        <button class="button button-dark button-with-icon" id="shareFilledButton"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 10.5 6.8-4M8.6 13.5l6.8 4"/></svg><span id="shareFilledLabel">Deellink voor leerling</span></button>
         <button class="button button-accent" id="filledPdfButton">Beoordeling als PDF</button>
         <button class="button button-ghost icon-control mobile-overview-control" id="classOverviewButton" aria-label="Klasoverzicht openen" title="Klasoverzicht"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10m6 10V4m6 16v-7m4 7H2"/></svg></button>
         <button class="button button-ghost icon-control" id="fillHelpButton" aria-label="Uitleg openen" title="Uitleg"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.8 9a2.4 2.4 0 1 1 3.4 2.2c-.8.4-1.2 1-1.2 1.8M12 17h.01"/></svg></button>
@@ -273,17 +280,17 @@
             <button class="student-edit-button" id="editStudentNameButton" type="button" aria-label="Naam van leerling wijzigen" title="Naam wijzigen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 20 4.5-1 10-10-3.5-3.5-10 10L4 20Z"/><path d="m13.5 6.5 3.5 3.5"/></svg></button>
           </div>
           <div class="student-edit-mode" id="studentEditMode" hidden>
-            <label><span>Naam leerling</span><input id="studentName" type="text" maxlength="60" placeholder="Bijvoorbeeld: Sanne" autocomplete="off"></label>
+            <label><span id="subjectNameLabel">Naam leerling</span><input id="studentName" type="text" maxlength="60" placeholder="Bijvoorbeeld: Sanne" autocomplete="off"></label>
             <button type="button" id="saveStudentNameButton" aria-label="Naam opslaan" title="Naam opslaan">✓</button>
             <button type="button" id="cancelStudentNameButton" aria-label="Wijzigen annuleren" title="Annuleren">×</button>
           </div>
         </div>
         <label class="class-context">
-          <span>Klas / cluster <small>voor alle leerlingen</small></span>
+          <span>Klas / cluster <small id="classContextSubjects">voor alle leerlingen</small></span>
           <input id="className" type="text" maxlength="60" placeholder="Bijvoorbeeld: 2B" autocomplete="off">
         </label>
         <label class="class-context">
-          <span>Docent / code <small>voor alle leerlingen</small></span>
+          <span>Docent / code <small id="teacherContextSubjects">voor alle leerlingen</small></span>
           <input id="teacherName" type="text" maxlength="80" placeholder="Bijvoorbeeld: HEB" autocomplete="off">
         </label>
         <div class="assessment-side">
@@ -294,9 +301,9 @@
           </div>
           <div class="live-result"><span>Punten <b id="fillTotal">0/0</b></span><strong id="fillGrade">-</strong><small>Cijfer</small></div>
         </div>
-        <label class="field assessment-comment-field">Opmerking voor leerling
+        <label class="field assessment-comment-field"><span id="assessmentCommentLabel">Opmerking voor leerling</span>
           <input id="assessmentComment" type="text" maxlength="160" placeholder="Korte, persoonlijke toelichting" aria-describedby="assessmentCommentHelp">
-          <span class="assessment-comment-help" id="assessmentCommentHelp">Zichtbaar voor de leerling en opgenomen in de deellink. Houd het kort. <b id="assessmentCommentCount">0/160</b></span>
+          <span class="assessment-comment-help" id="assessmentCommentHelp"><span id="assessmentCommentHelpText">Zichtbaar voor de leerling en opgenomen in de deellink. Houd het kort.</span> <b id="assessmentCommentCount">0/160</b></span>
         </label>
       </section>
       <div id="fillCriteria" class="fill-criteria"></div>
@@ -339,7 +346,7 @@
       </section>
       <section class="overview-analyses">
         <article class="overview-panel">
-          <div class="overview-panel-heading"><div><p class="eyebrow">Cijfers</p><h2>Cijferverdeling</h2></div><small>Alleen volledig beoordeelde leerlingen</small></div>
+          <div class="overview-panel-heading"><div><p class="eyebrow">Cijfers</p><h2>Cijferverdeling</h2></div><small id="completedSubjectsLabel">Alleen volledig beoordeelde leerlingen</small></div>
           <div class="grade-distribution" id="gradeDistribution"></div>
         </article>
         <article class="overview-panel criteria-analysis-panel">
@@ -349,10 +356,10 @@
         </article>
       </section>
       <section class="overview-panel grade-list-panel">
-        <div class="overview-panel-heading"><div><p class="eyebrow">Leerlingen</p><h2>Cijferlijst</h2></div><small>Alfabetisch op voornaam</small></div>
+        <div class="overview-panel-heading"><div><p class="eyebrow" id="subjectsOverviewLabel">Leerlingen</p><h2>Cijferlijst</h2></div><small id="subjectsSortLabel">Alfabetisch op voornaam</small></div>
         <div class="grade-list-scroll">
           <table class="web-grade-list">
-            <thead><tr><th>Leerling</th><th>Punten</th><th>Cijfer</th><th>Opmerking</th><th><span class="sr-only">Acties</span></th></tr></thead>
+            <thead><tr><th id="subjectTableHeading">Leerling</th><th>Punten</th><th>Cijfer</th><th>Opmerking</th><th><span class="sr-only">Acties</span></th></tr></thead>
             <tbody id="webGradeListBody"></tbody>
           </table>
         </div>
@@ -368,7 +375,7 @@
     </div>
     <main class="fill-shell shared-assessment-shell">
       <section class="settings-panel shared-summary" id="sharedSummary" aria-label="Resultaat van de leerling">
-        <div class="shared-person"><span>Leerling</span><strong id="sharedStudentName"></strong></div>
+        <div class="shared-person"><span id="sharedSubjectLabel">Leerling</span><strong id="sharedStudentName"></strong></div>
         <div class="shared-person"><span>Docent</span><strong id="sharedTeacherName"></strong></div>
         <p class="shared-comment" id="sharedComment" hidden><strong>Toelichting:</strong> <span id="sharedCommentText"></span></p>
         <div class="live-result shared-live-result" id="sharedLiveResult">
@@ -400,7 +407,7 @@
     <div class="import-dialog-content">
       <p class="eyebrow">Bestand opslaan</p>
       <h2 id="rubricExportTitle">Wat wil je opslaan?</h2>
-      <p>Kies of je de rubric, de leerlinglijst of alles inclusief <strong id="rubricExportAssessmentCount">leerlingen en beoordelingen</strong> wilt opslaan.</p>
+      <p id="rubricExportDescription">Kies of je de rubric, de leerlinglijst of alles inclusief <strong id="rubricExportAssessmentCount">leerlingen en beoordelingen</strong> wilt opslaan.</p>
       <div class="import-dialog-actions">
         <button class="button button-ghost" id="cancelRubricExport">Annuleren</button>
         <button class="button button-dark" id="exportRubricOnly">Alleen rubric opslaan</button>
@@ -420,6 +427,19 @@
         <button class="button button-ghost" id="cancelMagisterImport">Annuleren</button>
         <button class="button button-dark" id="importMagisterFirstNames">Alleen voornamen</button>
         <button class="button button-accent" id="importMagisterFullNames">Voor- en achternaam</button>
+        <button class="button button-dark" id="importMagisterGroups">Lijst bevat groepen</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog class="import-dialog" id="subjectTypeMismatchDialog" aria-labelledby="subjectTypeMismatchTitle">
+    <div class="import-dialog-content">
+      <p class="eyebrow">Instelling controleren</p>
+      <h2 id="subjectTypeMismatchTitle">De import gebruikt een andere stand</h2>
+      <p id="subjectTypeMismatchMessage"></p>
+      <div class="import-dialog-actions confirmation-dialog-actions">
+        <button class="button button-ghost" id="cancelSubjectTypeMismatch">Annuleren</button>
+        <button class="button button-accent" id="confirmSubjectTypeMismatch">Stand wijzigen en importeren</button>
       </div>
     </div>
   </dialog>
@@ -475,6 +495,26 @@
     </div>
   </dialog>
 
+  <dialog class="import-dialog" id="resultsCsvDialog" aria-labelledby="resultsCsvTitle">
+    <form method="dialog" class="import-dialog-content" id="resultsCsvForm">
+      <p class="eyebrow">Resultaten als CSV</p>
+      <h2 id="resultsCsvTitle">Welke kolommen wil je exporteren?</h2>
+      <p>Naam en cijfer staan altijd in de export. De overige kolommen kun je weglaten.</p>
+      <fieldset class="csv-column-options">
+        <legend class="sr-only">Kolommen in de CSV-export</legend>
+        <label><input type="checkbox" checked disabled> Naam <small>Altijd opgenomen</small></label>
+        <label><input type="checkbox" checked disabled> Cijfer <small>Altijd opgenomen</small></label>
+        <label><input type="checkbox" id="csvIncludePoints" checked> Punten</label>
+        <label><input type="checkbox" id="csvIncludeComments" checked> Opmerkingen</label>
+        <label><input type="checkbox" id="csvIncludeShareLinks" checked> Deellink</label>
+      </fieldset>
+      <div class="import-dialog-actions confirmation-dialog-actions">
+        <button class="button button-ghost" type="button" id="cancelResultsCsv">Annuleren</button>
+        <button class="button button-accent" type="submit" id="downloadResultsCsv">Download starten</button>
+      </div>
+    </form>
+  </dialog>
+
   <aside class="link-length-warning no-print" id="linkLengthWarning" role="status" aria-live="polite" hidden>
     <strong>Houd de deellink compact</strong>
     <p>Korte, concrete criteria en niveaus zorgen voor een beter leesbare rubric én een kortere deellink.</p>
@@ -487,6 +527,6 @@
   <script src="vendor/jspdf.umd.min.js"></script>
   <script src="vendor/jspdf.plugin.autotable.min.js"></script>
   <script src="vendor/jszip.min.js"></script>
-  <script src="app.js?v=48"></script>
+  <script src="app.js?v=51"></script>
 </body>
 </html>
