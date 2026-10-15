@@ -36,7 +36,7 @@ Een leerling krijgt via de deellink alleen de eigen rubric of beoordeling te zie
 - Meerdere leerlingen binnen één klas of cluster beoordelen
 - Klas of cluster en docentnaam of docentcode één keer instellen voor de hele beoordeling
 - Een leerlinglijst afzonderlijk openen en opslaan zonder de huidige rubric te vervangen
-- Een Magister-leerlinglijst uit CSV importeren met roepnamen, volledige namen of groepsnamen
+- Magister-CSV’s automatisch herkennen als leerling- of groepenlijst; bij leerlingen kiezen tussen roepnamen en volledige namen
 - Een complete klas met rubric en beoordelingen openen en opslaan
 - Een lege of ingevulde leerlingbeoordeling delen via een zelfstandige deellink
 - Eén leerling-PDF, alle voltooide PDF's of alle PDF's als ZIP downloaden

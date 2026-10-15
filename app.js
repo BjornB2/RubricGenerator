@@ -246,7 +246,18 @@ function prepareMagisterImport(csvText, returnView = 'editor') {
   if (rows.length < 2) throw new Error('Lege CSV');
   const headers = rows[0].map(normalizeCsvHeader);
   const column = name => headers.indexOf(name);
-  const firstNameIndex = column('roepnaam'), prefixIndex = column('tussenvoegsel'), lastNameIndex = column('achternaam'), classIndex = column('klas');
+  const groupIndex = column('groep'), firstNameIndex = column('roepnaam'), prefixIndex = column('tussenvoegsel'), lastNameIndex = column('achternaam'), classIndex = column('klas');
+  if (groupIndex >= 0) {
+    const students = rows.slice(1, 1001).map(row => ({
+      firstName:String(row[groupIndex] || '').trim(),prefix:'',lastName:'',
+      className:classIndex >= 0 ? String(row[classIndex] || '').trim() : ''
+    })).filter(group => group.firstName).sort((left,right) => left.firstName.localeCompare(right.firstName,'nl-NL',{sensitivity:'base',numeric:true}));
+    if (!students.length) throw new Error('Geen groepen');
+    const classes = [...new Set(students.map(group => group.className).filter(Boolean))];
+    pendingMagisterImport = {students,className:classes.length === 1 ? classes[0] : '',returnView};
+    importWithMatchingSubjectType('group', () => importMagisterStudents('groups'));
+    return;
+  }
   if (firstNameIndex < 0 || lastNameIndex < 0) throw new Error('Geen Magister-leerlinglijst');
   const students = rows.slice(1, 1001).map(row => ({
     firstName:String(row[firstNameIndex] || '').trim(),
@@ -1451,7 +1462,6 @@ $('#cancelMagisterImport').addEventListener('click', closeMagisterImportDialog);
 $('#magisterImportDialog').addEventListener('cancel', closeMagisterImportDialog);
 $('#importMagisterFirstNames').addEventListener('click', () => importWithMatchingSubjectType('student', () => importMagisterStudents('first')));
 $('#importMagisterFullNames').addEventListener('click', () => importWithMatchingSubjectType('student', () => importMagisterStudents('full')));
-$('#importMagisterGroups').addEventListener('click', () => importWithMatchingSubjectType('group', () => importMagisterStudents('groups')));
 $('#cancelSubjectTypeMismatch').addEventListener('click', closeSubjectTypeMismatchDialog);
 $('#subjectTypeMismatchDialog').addEventListener('cancel', closeSubjectTypeMismatchDialog);
 $('#confirmSubjectTypeMismatch').addEventListener('click', () => {
